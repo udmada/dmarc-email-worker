@@ -1,3 +1,4 @@
+// Legacy types kept for backwards compatibility
 export interface Env {
   R2_BUCKET: R2Bucket
   DMARC_ANALYTICS: AnalyticsEngineDataset
@@ -63,23 +64,23 @@ export type DmarcRecordRow = {
   recordIdentifiersHeaderFrom: string
 }
 
-export enum AlignmentType { // eslint-disable-line no-shadow
-  r = 0, // eslint-disable-line id-length
-  s = 1, // eslint-disable-line id-length
+export enum AlignmentType {
+  r = 0,
+  s = 1,
 }
 
-export enum DMARCResultType { // eslint-disable-line no-shadow
+export enum DMARCResultType {
   fail = 0,
   pass = 1,
 }
 
-export enum DispositionType { // eslint-disable-line no-shadow
+export enum DispositionType {
   none = 0,
   quarantine = 1,
   reject = 2,
 }
 
-export enum PolicyOverrideType { // eslint-disable-line no-shadow
+export enum PolicyOverrideType {
   other = 0,
   forwarded = 1,
   sampled_out = 2,

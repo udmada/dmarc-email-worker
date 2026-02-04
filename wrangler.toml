@@ -5,8 +5,8 @@ name = "dmarc-email-worker"
 main = "src/index.ts"
 
 [vars]
-SENDER_EMAIL = "reports@yourdomain.com" # Replace with your sender email
-SENDER_DOMAIN = "yourdomain.com"        # Replace with your domain
+# SENDER_EMAIL = "reports@yourdomain.com" # Replace with your sender email
+# SENDER_DOMAIN = "yourdomain.com" # Replace with your domain
 
 # Analytics Engine for real-time metrics
 [[analytics_engine_datasets]]

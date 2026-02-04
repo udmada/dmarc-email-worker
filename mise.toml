@@ -1,0 +1,30 @@
+[tools]
+hk = "latest"
+node = "lts"
+pnpm = "latest"
+wrangler = "latest"
+pkl = "latest"
+
+[tasks.install]
+description = "Install dependencies"
+run = "pnpm install"
+
+[tasks.dev]
+description = "Start development server"
+run = "pnpm start"
+
+[tasks.pretty]
+description = "Check code formatting"
+run = "pnpm pretty"
+
+[tasks.lint]
+description = "Lint source code"
+run = "pnpm lint"
+
+[tasks.test]
+description = "Run format check and lint"
+run = "pnpm test"
+
+[tasks.deploy]
+description = "Deploy to Cloudflare Workers"
+run = "pnpm run deploy"

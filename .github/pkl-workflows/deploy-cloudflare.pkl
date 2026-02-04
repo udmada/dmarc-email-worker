@@ -1,0 +1,55 @@
+amends "package://pkg.pkl-lang.org/pkl-pantry/com.github.actions@1.3.0#/Workflow.pkl"
+
+name = "Deploy to Cloudflare"
+
+on {
+    push {
+        paths {
+            "src/**"
+            "package.json"
+            "pnpm-lock.yaml"
+            "wrangler.toml"
+            "tsconfig.json"
+            "mise.toml"
+        }
+    }
+    pull_request {
+        paths {
+            "src/**"
+            "package.json"
+            "pnpm-lock.yaml"
+            "wrangler.toml"
+            "tsconfig.json"
+            "mise.toml"
+        }
+    }
+}
+
+env {
+    ["CLOUDFLARE_API_TOKEN"] = "${{ secrets.CLOUDFLARE_API_TOKEN }}"
+    ["CLOUDFLARE_ACCOUNT_ID"] = "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}"
+}
+
+jobs {
+    ["deploy"] {
+        `runs-on` = "ubuntu-slim"
+        environment = new { name = "production" }
+        steps {
+            new { uses = "actions/checkout@v4" }
+            new { uses = "jdx/mise-action@v2" }
+            new {
+                name = "Install dependencies"
+                run = "mise run install"
+            }
+            new {
+                name = "Run checks"
+                run = "mise run test"
+            }
+            new {
+                name = "Deploy to Cloudflare Workers"
+                `if` = "github.event_name == 'push'"
+                run = "mise run deploy"
+            }
+        }
+    }
+}

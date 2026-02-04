@@ -1,0 +1,32 @@
+amends "package://github.com/jdx/hk/releases/download/v1.28.0/hk@1.28.0#/Config.pkl"
+
+hooks {
+    ["pre-commit"] {
+        fix = true
+        stash = "git"
+        steps {
+            ["prettier"] {
+                glob = List("**/*.{ts,js,json,md,yml,yaml}")
+                check = "mise run pretty"
+                fix = "pnpm exec prettier --write 'src/**/*.{mjs,cjs,ts,d.ts}'"
+            }
+            ["eslint"] {
+                glob = List("src/**/*.ts")
+                check = "mise run lint"
+                fix = "pnpm exec eslint . --fix"
+            }
+            ["pkl-workflows"] {
+                glob = List(".github/pkl-workflows/*.pkl")
+                check = #"mise exec -- pkl eval .github/pkl-workflows/*.pkl -o ".github/workflows/%{moduleName}.yml" && pnpm exec prettier --write .github/workflows/*.yml && git add .github/workflows/*.yml"#
+                exclusive = true
+            }
+        }
+    }
+    ["pre-push"] {
+        steps {
+            ["test"] {
+                check = "mise run test"
+            }
+        }
+    }
+}

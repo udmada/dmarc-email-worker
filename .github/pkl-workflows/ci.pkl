@@ -1,0 +1,30 @@
+amends "package://pkg.pkl-lang.org/pkl-pantry/com.github.actions@1.3.0#/Workflow.pkl"
+
+name = "CI"
+
+on {
+    push {}
+    pull_request {}
+}
+
+jobs {
+    ["test"] {
+        `runs-on` = "ubuntu-slim"
+        steps {
+            new { uses = "actions/checkout@v4" }
+            new { uses = "jdx/mise-action@v2" }
+            new {
+                name = "Install dependencies"
+                run = "mise run install"
+            }
+            new {
+                name = "Format check"
+                run = "mise run pretty"
+            }
+            new {
+                name = "Lint"
+                run = "mise run lint"
+            }
+        }
+    }
+}

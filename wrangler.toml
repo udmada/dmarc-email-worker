@@ -1,4 +1,5 @@
-compatibility_date = "2026-01-20"
+compatibility_flags = ["nodejs_compat"]
+compatibility_date = "2026-02-04"
 
 name = "dmarc-email-worker"
 main = "src/index.ts"
@@ -16,7 +17,7 @@ dataset = "dmarc_reports"
 [[d1_databases]]
 binding = "DB"
 database_name = "dmarc_reports"
-database_id = "YOUR_D1_DATABASE_ID" # Replace with your D1 database ID
+# database_id = "YOUR_D1_DATABASE_ID" # Replace with your D1 database ID
 
 # Hyperdrive for PostgreSQL connection pooling (optional)
 # [[hyperdrive]]
@@ -44,5 +45,5 @@ simple = { limit = 100, period = 60 }
 # Legacy R2 bucket (kept for backwards compatibility)
 [[r2_buckets]]
 binding = "R2_BUCKET"
-bucket_name = "dmarc-reports-open"
-preview_bucket_name = "dmarc-reports-open"
+bucket_name = "dmarc-aggregates"
+preview_bucket_name = "dmarc-aggregates"

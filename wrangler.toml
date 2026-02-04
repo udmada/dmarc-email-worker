@@ -1,15 +1,48 @@
+compatibility_date = "2026-01-20"
+
 name = "dmarc-email-worker"
 main = "src/index.ts"
-compatibility_date = "2023-03-16"
 
+[vars]
+SENDER_EMAIL = "reports@yourdomain.com" # Replace with your sender email
+SENDER_DOMAIN = "yourdomain.com"        # Replace with your domain
 
-[[r2_buckets]]
-binding = "R2_BUCKET"
-bucket_name = "dmarc-reports-open"         # Set this to your R2 bucket name. Required
-preview_bucket_name = "dmarc-reports-open" # Set this to your preview R2 bucket name. Can be equal to bucket_name. Optional
-
-
+# Analytics Engine for real-time metrics
 [[analytics_engine_datasets]]
-binding = "DMARC_ANALYTICS"
+binding = "ANALYTICS"
 dataset = "dmarc_reports"
 
+# D1 Database for report storage
+[[d1_databases]]
+binding = "DB"
+database_name = "dmarc_reports"
+database_id = "YOUR_D1_DATABASE_ID" # Replace with your D1 database ID
+
+# Hyperdrive for PostgreSQL connection pooling (optional)
+# [[hyperdrive]]
+# binding = "HYPERDRIVE"
+# id = "YOUR_HYPERDRIVE_ID"  # Replace with your Hyperdrive config ID
+
+# Durable Object for delayed reply emails (optional, free tier)
+[durable_objects]
+bindings = [{ name = "REPLY_QUEUE", class_name = "ReplyQueue" }]
+[[migrations]]
+tag = "v1"
+new_classes = ["ReplyQueue"]
+
+# Email Sending capability (optional, used with reply DO)
+[[send_email]]
+name = "EMAIL"
+
+# Rate Limiting
+[[unsafe.bindings]]
+name = "RATE_LIMIT"
+type = "ratelimit"
+namespace_id = "dmarc_email_rate_limit"
+simple = { limit = 100, period = 60 }
+
+# Legacy R2 bucket (kept for backwards compatibility)
+[[r2_buckets]]
+binding = "R2_BUCKET"
+bucket_name = "dmarc-reports-open"
+preview_bucket_name = "dmarc-reports-open"

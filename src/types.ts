@@ -1,90 +1,61 @@
-// Legacy types kept for backwards compatibility
+import type { ReplyQueue } from "./reply-queue";
+
 export interface Env {
-  R2_BUCKET: R2Bucket
-  DMARC_ANALYTICS: AnalyticsEngineDataset
+  ANALYTICS: AnalyticsEngineDataset;
+  DB: D1Database;
+  HYPERDRIVE?: Hyperdrive;
+  EMAIL?: SendEmail;
+  REPLY_QUEUE?: DurableObjectNamespace<ReplyQueue>;
+  RATE_LIMIT: RateLimit;
+  SENDER_EMAIL: string;
+  SENDER_DOMAIN: string;
 }
 
-export type Header = Record<string, string>
-
-export type Address = {
-  address: string
-  name: string
+export interface ReplyMessage {
+  messageId: string;
+  replyTo: string;
+  reportId: string;
+  subject: string;
+  sendAt: number;
 }
 
-export type Attachment = {
-  filename: string
-  mimeType: string
-  disposition: 'attachment' | 'inline' | null
-  related?: boolean
-  contentId?: string
-  content: string
+export interface DMARCReport {
+  reportId: string;
+  orgName: string;
+  domain: string;
+  beginDate: number;
+  endDate: number;
+  dkimPass: number;
+  dkimFail: number;
+  dkimTemperror: number;
+  spfPass: number;
+  spfFail: number;
+  spfTemperror: number;
+  policyP: string;
+  rawXml: string;
 }
 
-export type Email = {
-  headers: Header[]
-  from: Address
-  sender?: Address
-  replyTo?: Address[]
-  deliveredTo?: string
-  returnPath?: string
-  to: Address[]
-  cc?: Address[]
-  bcc?: Address[]
-  subject?: string
-  messageId: string
-  inReplyTo?: string
-  references?: string
-  date?: string
-  html?: string
-  text?: string
-  attachments: Attachment[]
-}
-
-export type DmarcRecordRow = {
-  reportMetadataReportId: string
-  reportMetadataOrgName: string
-  reportMetadataDateRangeBegin: number
-  reportMetadataDateRangeEnd: number
-  reportMetadataError: string
-
-  policyPublishedDomain: string
-  policyPublishedADKIM: AlignmentType
-  policyPublishedASPF: AlignmentType
-  policyPublishedP: DispositionType
-  policyPublishedSP: DispositionType
-  policyPublishedPct: number
-
-  recordRowSourceIP: string
-  recordRowCount: number
-  recordRowPolicyEvaluatedDKIM: DMARCResultType
-  recordRowPolicyEvaluatedSPF: DMARCResultType
-  recordRowPolicyEvaluatedDisposition: DispositionType
-  recordRowPolicyEvaluatedReasonType: PolicyOverrideType
-  recordIdentifiersEnvelopeTo: string
-  recordIdentifiersHeaderFrom: string
-}
-
-export enum AlignmentType {
-  r = 0,
-  s = 1,
-}
-
-export enum DMARCResultType {
-  fail = 0,
-  pass = 1,
-}
-
-export enum DispositionType {
-  none = 0,
-  quarantine = 1,
-  reject = 2,
-}
-
-export enum PolicyOverrideType {
-  other = 0,
-  forwarded = 1,
-  sampled_out = 2,
-  trusted_forwarder = 3,
-  mailing_list = 4,
-  local_policy = 5,
+// RFC 8460 TLS-RPT (kebab-case per spec)
+export interface TLSReport {
+  "organization-name": string;
+  "date-range": {
+    "start-datetime": string;
+    "end-datetime": string;
+  };
+  "contact-info": string;
+  "report-id": string;
+  "policies"?: Array<{
+    "policy-type": "sts" | "dane" | "dane-only" | "no-policy-found";
+    "policy-domain": string;
+    "summary": {
+      "total-successful-session-count": number;
+      "total-failure-session-count": number;
+    };
+    "failure-details"?: Array<{
+      "result-type": string;
+      "sending-mta-ip": string;
+      "receiving-mx-hostname": string;
+      "failed-session-count": number;
+    }>;
+  }>;
 }

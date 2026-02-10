@@ -1,11 +1,12 @@
 export { ReplyQueue } from "./reply-queue";
-import PostalMime from "postal-mime";
 import pako from "pako";
-import type { Env } from "./types";
+import PostalMime from "postal-mime";
+
 import { parseDMARCReportFromString } from "./dmarc";
-import { parseTLSReport } from "./tlsrpt";
-import { storeReport, storeTLSReport } from "./storage";
 import { queueReply } from "./reply";
+import { storeReport, storeTLSReport } from "./storage";
+import { parseTLSReport } from "./tlsrpt";
+import type { Env } from "./types";
 
 const TRUSTED_REPORTERS = new Set([
   "google.com",

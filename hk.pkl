@@ -13,7 +13,7 @@ hooks {
             ["oxlint"] {
                 glob = List("src/**/*.ts")
                 check = "mise run lint"
-                fix = "pnpm exec oxlint . --fix"
+                fix = "pnpm exec oxlint --type-aware --fix -fix-suggestions"
             }
             ["pkl-workflows"] {
                 glob = List(".github/pkl-workflows/*.pkl")

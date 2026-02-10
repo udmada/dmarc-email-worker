@@ -1,7 +1,8 @@
-import { describe, it, expect } from "vitest";
 import { env, runInDurableObject } from "cloudflare:test";
-import type { ReplyMessage } from "../types";
+import { describe, it, expect } from "vitest";
+
 import type { ReplyQueue } from "../reply-queue";
+import type { ReplyMessage } from "../types";
 
 function makeMsg(overrides: Partial<ReplyMessage> = {}): ReplyMessage {
   return {

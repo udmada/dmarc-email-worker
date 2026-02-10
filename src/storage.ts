@@ -1,4 +1,5 @@
 import postgres from "postgres";
+
 import type { DMARCReport, Env, TLSReport } from "./types";
 
 // Hyperdrive connection singleton
@@ -14,7 +15,7 @@ function getPostgresClient(env: Env): ReturnType<typeof postgres> | null {
 export async function storeReport(
   report: DMARCReport,
   type: "dmarc" | "tlsrpt",
-  env: Env
+  env: Env,
 ): Promise<void> {
   storeInAnalytics(report, type, env);
   await Promise.allSettled([
@@ -34,7 +35,7 @@ export async function storeTLSReport(report: TLSReport, env: Env): Promise<void>
         (report_id, org_name, policy_domain, policy_type,
          total_success, total_failures, failure_details, begin_date, end_date)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `
+      `,
       )
         .bind(
           report["report-id"],
@@ -45,7 +46,7 @@ export async function storeTLSReport(report: TLSReport, env: Env): Promise<void>
           policy.summary["total-failure-session-count"],
           JSON.stringify(policy["failure-details"] ?? []),
           new Date(report["date-range"]["start-datetime"]).getTime() / 1000,
-          new Date(report["date-range"]["end-datetime"]).getTime() / 1000
+          new Date(report["date-range"]["end-datetime"]).getTime() / 1000,
         )
         .run();
     } catch (e) {
@@ -80,7 +81,7 @@ async function storeInD1(report: DMARCReport, db: D1Database): Promise<void> {
        spf_pass, spf_fail, spf_temperror, policy_p, raw_xml)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT (report_id) DO NOTHING
-    `
+    `,
       )
       .bind(
         report.reportId,
@@ -95,7 +96,7 @@ async function storeInD1(report: DMARCReport, db: D1Database): Promise<void> {
         report.spfFail,
         report.spfTemperror,
         report.policyP,
-        report.rawXml
+        report.rawXml,
       )
       .run();
   } catch (e) {

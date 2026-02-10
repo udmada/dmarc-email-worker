@@ -1,11 +1,12 @@
 import { EmailMessage } from "cloudflare:email";
 import { createMimeMessage } from "mimetext";
+
 import type { Env, ReplyMessage } from "./types";
 
 export async function queueReply(
   message: ForwardableEmailMessage,
   reportId: string,
-  env: Env
+  env: Env,
 ): Promise<void> {
   if (env.REPLY_QUEUE === undefined) {
     return;

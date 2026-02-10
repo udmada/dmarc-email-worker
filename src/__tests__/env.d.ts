@@ -1,5 +1,5 @@
-import type { Env } from "../types";
 import type { ReplyQueue } from "../reply-queue";
+import type { Env } from "../types";
 
 declare module "cloudflare:test" {
   interface ProvidedEnv extends Env {

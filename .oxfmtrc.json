@@ -3,9 +3,29 @@
   "arrowParens": "always",
   "bracketSameLine": true,
   "bracketSpacing": true,
+  "experimentalSortImports": {
+    "groups": [
+      ["builtin"],
+      ["type-import"],
+      ["side-effect"],
+      ["external", "type-external"],
+      ["internal", "type-internal"],
+      ["parent", "type-parent"],
+      ["sibling", "type-sibling"],
+      ["index", "type-index"]
+    ],
+
+    "partitionByNewLine": true,
+    "type": "natural",
+    "order": "asc",
+    "fallbackSort": { "type": "alphabetical", "order": "asc" }
+  },
+  "experimentalSortPackageJson": {
+    "sortScripts": true
+  },
   "quoteProps": "consistent",
   "semi": true,
   "singleQuote": false,
   "tabWidth": 2,
-  "trailingComma": "es5"
+  "trailingComma": "all"
 }

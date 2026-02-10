@@ -4,7 +4,9 @@
     "correctness": "error",
     "suspicious": "warn"
   },
+  "plugins": ["import", "typescript"],
   "rules": {
+    "import/no-cycle": ["error", { "maxDepth": 3 }],
     "typescript/ban-ts-comment": "off",
     "typescript/explicit-function-return-type": "warn",
     "typescript/no-confusing-void-expression": "warn",

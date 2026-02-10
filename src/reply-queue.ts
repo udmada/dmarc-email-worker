@@ -1,6 +1,7 @@
 import { DurableObject } from "cloudflare:workers";
-import type { Env, ReplyMessage } from "./types";
+
 import { sendReply } from "./reply";
+import type { Env, ReplyMessage } from "./types";
 
 interface PendingJob {
   msg: ReplyMessage;
@@ -45,7 +46,7 @@ export class ReplyQueue extends DurableObject<Env> {
         const next = job.attempts + 1;
         if (next >= MAX_ATTEMPTS) {
           console.error(
-            `Dropping reply for ${job.msg.reportId} after ${String(MAX_ATTEMPTS)} attempts: ${String(e)}`
+            `Dropping reply for ${job.msg.reportId} after ${String(MAX_ATTEMPTS)} attempts: ${String(e)}`,
           );
           await this.ctx.storage.delete(key);
         } else {

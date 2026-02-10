@@ -1,4 +1,5 @@
 import { type X2jOptions, XMLParser } from "fast-xml-parser";
+
 import type { DMARCReport } from "./types";
 
 // XML DMARC Report Types (based on RFC 7489)
@@ -357,7 +358,7 @@ if (import.meta.vitest) {
 
     it("throws on invalid XML structure", () => {
       expect(() => parseDMARCReportFromString("<html><body>not dmarc</body></html>")).toThrow(
-        "Invalid XML structure"
+        "Invalid XML structure",
       );
     });
 

@@ -1,5 +1,6 @@
-import { describe, it, expect, beforeAll } from "vitest";
 import { env } from "cloudflare:test";
+import { describe, it, expect, beforeAll } from "vitest";
+
 import { storeTLSReport } from "../storage";
 import type { TLSReport } from "../types";
 
@@ -122,7 +123,7 @@ describe("storeTLSReport", () => {
     await storeTLSReport(report, env);
 
     const results = await env.DB.prepare(
-      "SELECT * FROM tls_reports WHERE report_id = ? ORDER BY policy_domain"
+      "SELECT * FROM tls_reports WHERE report_id = ? ORDER BY policy_domain",
     )
       .bind("tls-multi-policy")
       .all();

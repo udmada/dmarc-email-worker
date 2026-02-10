@@ -2,12 +2,12 @@
   "name": "dmarc-reports-email-worker",
   "version": "0.1.0",
   "scripts": {
-    "start": "pnpm exec wrangler dev",
     "deploy": "pnpm exec wrangler deploy",
-    "test": "pnpm exec oxfmt --check && pnpm exec oxlint .",
-    "pretty": "pnpm exec oxfmt --check",
-    "format": "pnpm exec oxfmt",
-    "lint": "pnpm exec oxlint ."
+    "format": "pnpm exec oxfmt --no-error-on-unmatched-pattern",
+    "lint": "pnpm exec oxlint --type-aware --fix --fix-suggestions",
+    "pretty": "pnpm exec oxfmt --check --no-error-on-unmatched-pattern",
+    "start": "pnpm exec wrangler dev",
+    "test": "pnpm exec oxfmt --check && pnpm exec oxlint --type-aware"
   },
   "dependencies": {
     "fast-xml-parser": "^5.3.5",
@@ -27,6 +27,7 @@
     "@vitest/ui": "3.2.4",
     "oxfmt": "latest",
     "oxlint": "latest",
+    "oxlint-tsgolint": "^0.11.5",
     "typescript": "^5.9.3",
     "vitest": "3.2.4",
     "wrangler": "^4.64.0"

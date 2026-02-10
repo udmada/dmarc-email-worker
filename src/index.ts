@@ -26,8 +26,17 @@ export default {
   },
 
   async email(message: ForwardableEmailMessage, env: Env): Promise<void> {
-    // Rate limiting per sender domain
     const fromDomain = message.from.split("@")[1]?.toLowerCase() ?? "unknown";
+    const ts = new Date().toISOString().replace(/[:.]/g, "-");
+    const key = `raw-emails/${fromDomain}/${ts}.eml`;
+
+    // Store raw email to R2 for replay before any validation
+    const arrayBuffer = await new Response(message.raw).arrayBuffer();
+    await env.R2_BUCKET.put(key, arrayBuffer, {
+      customMetadata: { from: message.from, to: message.to },
+    });
+
+    // Rate limiting per sender domain
     const rateLimit = await env.RATE_LIMIT.limit({
       key: `email:${fromDomain}`,
     });
@@ -50,8 +59,7 @@ export default {
       return;
     }
 
-    // Parse email - message.raw is a ReadableStream
-    const arrayBuffer = await new Response(message.raw).arrayBuffer();
+    // Parse email from already-read buffer
     const rawEmail = new Uint8Array(arrayBuffer);
     const parsed = await PostalMime.parse(rawEmail);
 

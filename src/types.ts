@@ -6,6 +6,7 @@ export interface Env {
   HYPERDRIVE?: Hyperdrive;
   EMAIL?: SendEmail;
   REPLY_QUEUE?: DurableObjectNamespace<ReplyQueue>;
+  R2_BUCKET: R2Bucket;
   RATE_LIMIT: RateLimit;
   SENDER_EMAIL: string;
   SENDER_DOMAIN: string;

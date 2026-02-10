@@ -45,10 +45,8 @@ export default {
     // DMARC validation
     const authResults = message.headers.get("Authentication-Results") ?? "";
     const dmarcMatch = authResults.match(/dmarc=(\w+)/);
-    if (dmarcMatch?.[1] !== "pass") {
-      console.warn(
-        `DMARC ${dmarcMatch?.[1] ?? "none"} from ${fromDomain}, rejecting`
-      );
+    if (dmarcMatch?.[1] === "fail") {
+      console.warn(`DMARC fail from ${fromDomain}, rejecting`);
       return;
     }
 

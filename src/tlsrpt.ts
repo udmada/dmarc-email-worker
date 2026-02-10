@@ -70,9 +70,7 @@ if (import.meta.vitest) {
       }
       expect(report["organization-name"]).toBe("google.com");
       expect(report["report-id"]).toBe("tls-abc123");
-      expect(report["date-range"]["start-datetime"]).toBe(
-        "2024-01-01T00:00:00Z"
-      );
+      expect(report["date-range"]["start-datetime"]).toBe("2024-01-01T00:00:00Z");
       expect(report.policies).toHaveLength(1);
 
       const policy = report.policies?.[0];

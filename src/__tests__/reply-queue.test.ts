@@ -29,9 +29,7 @@ describe("ReplyQueue", () => {
     await stub.enqueue(msg);
 
     const job = await runInDurableObject(stub, async (_instance, state) => {
-      return await state.storage.get<{ msg: ReplyMessage; attempts: number }>(
-        "job:store-test"
-      );
+      return await state.storage.get<{ msg: ReplyMessage; attempts: number }>("job:store-test");
     });
 
     expect(job).not.toBeUndefined();
@@ -71,14 +69,11 @@ describe("ReplyQueue", () => {
     // sendReply is a no-op when EMAIL is undefined, so alarm "succeeds"
     await stub.enqueue(makeMsg({ reportId: "due-job" }));
 
-    const remaining = await runInDurableObject(
-      stub,
-      async (instance, state) => {
-        await instance.alarm();
-        const entries = await state.storage.list({ prefix: "job:" });
-        return entries.size;
-      }
-    );
+    const remaining = await runInDurableObject(stub, async (instance, state) => {
+      await instance.alarm();
+      const entries = await state.storage.list({ prefix: "job:" });
+      return entries.size;
+    });
 
     expect(remaining).toBe(0);
   });

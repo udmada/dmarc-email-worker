@@ -74,9 +74,7 @@ describe("storeTLSReport", () => {
 
     await storeTLSReport(report, env);
 
-    const result = await env.DB.prepare(
-      "SELECT * FROM tls_reports WHERE report_id = ?"
-    )
+    const result = await env.DB.prepare("SELECT * FROM tls_reports WHERE report_id = ?")
       .bind("tls-store-test")
       .first();
 
@@ -148,9 +146,7 @@ describe("storeTLSReport", () => {
 
     await expect(storeTLSReport(report, env)).resolves.toBeUndefined();
 
-    const result = await env.DB.prepare(
-      "SELECT * FROM tls_reports WHERE report_id = ?"
-    )
+    const result = await env.DB.prepare("SELECT * FROM tls_reports WHERE report_id = ?")
       .bind("tls-no-policies")
       .first();
 

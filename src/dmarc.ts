@@ -94,11 +94,7 @@ function isXMLDMARCFeedback(obj: unknown): obj is XMLDMARCFeedback {
   if (typeof obj !== "object" || obj === null) {
     return false;
   }
-  if (
-    "feedback" in obj &&
-    typeof obj.feedback === "object" &&
-    obj.feedback !== null
-  ) {
+  if ("feedback" in obj && typeof obj.feedback === "object" && obj.feedback !== null) {
     return true;
   }
   return "report_metadata" in obj || "policy_published" in obj;
@@ -131,10 +127,11 @@ export function parseDMARCReportFromString(xml: string): DMARCReport {
     spfTemperror = 0;
 
   const records = feedback.record;
-  const recordsArray: XMLDMARCRecord[] =
-    !records ? []
-    : Array.isArray(records) ? records
-    : [records];
+  const recordsArray: XMLDMARCRecord[] = !records
+    ? []
+    : Array.isArray(records)
+      ? records
+      : [records];
 
   for (const record of recordsArray) {
     const authResults = record.auth_results;
@@ -144,13 +141,11 @@ export function parseDMARCReportFromString(xml: string): DMARCReport {
 
     // DKIM results
     const dkimElements = authResults.dkim ?? [];
-    const dkimArray: XMLAuthResult[] =
-      Array.isArray(dkimElements) ? dkimElements : [dkimElements];
+    const dkimArray: XMLAuthResult[] = Array.isArray(dkimElements) ? dkimElements : [dkimElements];
 
     for (const dkim of dkimArray) {
       const dkimResult = dkim.result;
-      const result =
-        typeof dkimResult === "string" ? dkimResult.toLowerCase() : "";
+      const result = typeof dkimResult === "string" ? dkimResult.toLowerCase() : "";
       if (result === "pass") {
         dkimPass++;
       } else if (result === "fail") {
@@ -162,13 +157,11 @@ export function parseDMARCReportFromString(xml: string): DMARCReport {
 
     // SPF results
     const spfElements = authResults.spf ?? [];
-    const spfArray: XMLAuthResult[] =
-      Array.isArray(spfElements) ? spfElements : [spfElements];
+    const spfArray: XMLAuthResult[] = Array.isArray(spfElements) ? spfElements : [spfElements];
 
     for (const spf of spfArray) {
       const spfResult = spf.result;
-      const result =
-        typeof spfResult === "string" ? spfResult.toLowerCase() : "";
+      const result = typeof spfResult === "string" ? spfResult.toLowerCase() : "";
       if (result === "pass") {
         spfPass++;
       } else if (result === "fail") {
@@ -363,9 +356,9 @@ if (import.meta.vitest) {
     });
 
     it("throws on invalid XML structure", () => {
-      expect(() =>
-        parseDMARCReportFromString("<html><body>not dmarc</body></html>")
-      ).toThrow("Invalid XML structure");
+      expect(() => parseDMARCReportFromString("<html><body>not dmarc</body></html>")).toThrow(
+        "Invalid XML structure"
+      );
     });
 
     it("handles record with no auth_results", () => {

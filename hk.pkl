@@ -5,19 +5,19 @@ hooks {
         fix = true
         stash = "git"
         steps {
-            ["prettier"] {
+            ["oxfmt"] {
                 glob = List("**/*.{ts,js,json,md,yml,yaml}")
                 check = "mise run pretty"
-                fix = "pnpm exec prettier --write 'src/**/*.{mjs,cjs,ts,d.ts}'"
+                fix = "pnpm exec oxfmt src/"
             }
-            ["eslint"] {
+            ["oxlint"] {
                 glob = List("src/**/*.ts")
                 check = "mise run lint"
-                fix = "pnpm exec eslint . --fix"
+                fix = "pnpm exec oxlint . --fix"
             }
             ["pkl-workflows"] {
                 glob = List(".github/pkl-workflows/*.pkl")
-                check = #"mise exec -- pkl eval .github/pkl-workflows/*.pkl -o ".github/workflows/%{moduleName}.yml" && pnpm exec prettier --write .github/workflows/*.yml && git add .github/workflows/*.yml"#
+                check = #"mise exec -- pkl eval .github/pkl-workflows/*.pkl -o ".github/workflows/%{moduleName}.yml" && pnpm exec oxfmt .github/workflows/*.yml && git add .github/workflows/*.yml"#
                 exclusive = true
             }
         }

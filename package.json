@@ -4,9 +4,10 @@
   "scripts": {
     "start": "pnpm exec wrangler dev",
     "deploy": "pnpm exec wrangler deploy",
-    "test": "pnpm exec prettier --list-different 'src/**/*.{mjs,cjs,ts,d.ts}' && pnpm exec eslint .",
-    "pretty": "pnpm exec prettier --list-different 'src/**/*.{mjs,cjs,ts,d.ts}'",
-    "lint": "pnpm exec eslint ."
+    "test": "pnpm exec oxfmt --check && pnpm exec oxlint .",
+    "pretty": "pnpm exec oxfmt --check",
+    "format": "pnpm exec oxfmt",
+    "lint": "pnpm exec oxlint ."
   },
   "dependencies": {
     "fast-xml-parser": "^5.3.5",
@@ -20,18 +21,13 @@
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "0.12.8",
     "@cloudflare/workers-types": "^4.20260210.0",
-    "@eslint/js": "^9.39.2",
     "@types/mime-db": "^1.43.6",
     "@types/mime-types": "^3.0.1",
     "@types/pako": "^2.0.4",
-    "@typescript-eslint/eslint-plugin": "^8.55.0",
-    "@typescript-eslint/parser": "^8.55.0",
     "@vitest/ui": "3.2.4",
-    "eslint": "^9.39.2",
-    "eslint-config-prettier": "^10.1.8",
-    "prettier": "^3.8.1",
+    "oxfmt": "latest",
+    "oxlint": "latest",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.55.0",
     "vitest": "3.2.4",
     "wrangler": "^4.64.0"
   }

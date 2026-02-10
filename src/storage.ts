@@ -19,16 +19,11 @@ export async function storeReport(
   storeInAnalytics(report, type, env);
   await Promise.allSettled([
     storeInD1(report, env.DB),
-    env.HYPERDRIVE !== undefined ?
-      storeInPostgres(report, env)
-    : Promise.resolve(),
+    env.HYPERDRIVE !== undefined ? storeInPostgres(report, env) : Promise.resolve(),
   ]);
 }
 
-export async function storeTLSReport(
-  report: TLSReport,
-  env: Env
-): Promise<void> {
+export async function storeTLSReport(report: TLSReport, env: Env): Promise<void> {
   const policies = report.policies ?? [];
 
   for (const policy of policies) {

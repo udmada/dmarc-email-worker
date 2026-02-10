@@ -90,15 +90,15 @@ export default {
 } satisfies ExportedHandler<Env>;
 
 // Optimized: Single decompression + detection
-function detectAndDecompress(attachment: {
-  mimeType?: string;
-  content: ArrayBuffer | string;
-}): { type: "dmarc" | "tlsrpt" | "unknown"; content: string } {
+function detectAndDecompress(attachment: { mimeType?: string; content: ArrayBuffer | string }): {
+  type: "dmarc" | "tlsrpt" | "unknown";
+  content: string;
+} {
   let content: string;
   const raw =
-    typeof attachment.content === "string" ?
-      new TextEncoder().encode(attachment.content)
-    : new Uint8Array(attachment.content);
+    typeof attachment.content === "string"
+      ? new TextEncoder().encode(attachment.content)
+      : new Uint8Array(attachment.content);
 
   try {
     const decompressed = pako.ungzip(raw);

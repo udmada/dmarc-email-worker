@@ -1,0 +1,26 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn"
+  },
+  "rules": {
+    "typescript/ban-ts-comment": "off",
+    "typescript/explicit-function-return-type": "warn",
+    "typescript/no-confusing-void-expression": "warn",
+    "typescript/no-explicit-any": "warn",
+    "typescript/no-misused-promises": "warn",
+    "typescript/no-non-null-assertion": "warn",
+    "typescript/no-unnecessary-type-assertion": "warn",
+    "typescript/no-unnecessary-type-constraint": "warn",
+    "typescript/no-unsafe-argument": "warn",
+    "typescript/no-unsafe-assignment": "warn",
+    "typescript/no-unsafe-call": "warn",
+    "typescript/no-unsafe-member-access": "warn",
+    "typescript/no-unsafe-return": "warn",
+    "typescript/only-throw-error": "warn",
+    "typescript/prefer-promise-reject-errors": "warn",
+    "typescript/strict-boolean-expressions": "error",
+    "typescript/use-unknown-in-catch-callback-variable": "warn"
+  }
+}

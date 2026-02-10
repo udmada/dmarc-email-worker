@@ -29,6 +29,7 @@ npm install
 ```
 
 This installs:
+
 - `postal-mime` - Email parsing
 - `fast-xml-parser` - DMARC XML parsing
 - `pako` - Gzip decompression
@@ -133,14 +134,23 @@ wrangler deploy
 ## Step 10: Monitor and Verify
 
 1. **Analytics Engine**: Query with GraphQL API
+
    ```graphql
    query {
      viewer {
        accounts(filter: { accountTag: "YOUR_ACCOUNT_ID" }) {
          dmarcAnalytics: analyticsEngineDatasets(filter: { datasetId: "dmarc_reports" }) {
            nodes {
-             dimensions { blob1, blob2, blob3 }
-             metrics { double1, double2, double3 }
+             dimensions {
+               blob1
+               blob2
+               blob3
+             }
+             metrics {
+               double1
+               double2
+               double3
+             }
            }
          }
        }
@@ -149,6 +159,7 @@ wrangler deploy
    ```
 
 2. **D1 Database**: Query reports
+
    ```bash
    wrangler d1 execute dmarc_reports --command="SELECT * FROM dmarc_reports LIMIT 10"
    ```
@@ -168,8 +179,14 @@ The worker only accepts reports from trusted domains (src/index.ts:59-62):
 
 ```typescript
 const TRUSTED_REPORTERS = new Set([
-  'google.com', 'microsoft.com', 'yahoo.com', 'amazon.com',
-  'proofpoint.com', 'dmarcian.com', 'postmarkapp.com', 'sendgrid.net'
+  "google.com",
+  "microsoft.com",
+  "yahoo.com",
+  "amazon.com",
+  "proofpoint.com",
+  "dmarcian.com",
+  "postmarkapp.com",
+  "sendgrid.net",
 ]);
 ```
 
@@ -200,6 +217,7 @@ Configured to 100 emails/minute per sender domain. Adjust in `wrangler.toml:30`.
 ### PostgreSQL Tables (Optional)
 
 Same schema as D1 but with:
+
 - TIMESTAMP types instead of INTEGER
 - JSONB for failure_details
 - Advanced composite indexes
@@ -209,6 +227,7 @@ Same schema as D1 but with:
 ## Reply Queue Processing (Optional)
 
 When the Durable Object and SendEmail bindings are configured (free tier), the worker sends acknowledgment emails 1 hour after processing using:
+
 - Durable Object Alarms for delayed scheduling
 - In-Reply-To header for threading
 - References header for proper email client display
@@ -224,20 +243,24 @@ Customize the reply template in `sendReply()` in `src/reply.ts`.
 ## Troubleshooting
 
 ### Issue: No data in Analytics Engine
+
 - Check that `ANALYTICS` binding is correct
 - Verify dataset name matches in wrangler.toml
 
 ### Issue: Reply emails not sending
+
 - Verify `REPLY_QUEUE` DO binding is uncommented in wrangler.toml
 - Verify `EMAIL` send_email binding is uncommented
 - Check worker logs: `wrangler tail`
 
 ### Issue: PostgreSQL connection fails
+
 - Verify Hyperdrive connection string
 - Check network access to PostgreSQL instance
 - Ensure schema is created
 
 ### Issue: Rate limit too strict
+
 - Adjust `simple.limit` in wrangler.toml
 - Consider per-IP rate limiting instead of per-domain
 
@@ -265,6 +288,7 @@ Customize the reply template in `sendReply()` in `src/reply.ts`.
 ## Support
 
 For issues or questions:
+
 - Review worker logs: `wrangler tail`
 - Check Cloudflare Dashboard for error rates
 - Verify email routing configuration

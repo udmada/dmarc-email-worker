@@ -9,7 +9,7 @@
     "lint": "pnpm exec eslint ."
   },
   "dependencies": {
-    "fast-xml-parser": "^5.3.4",
+    "fast-xml-parser": "^5.3.5",
     "mime-db": "^1.54.0",
     "mimetext": "^3.0.28",
     "pako": "^2.1.0",
@@ -19,20 +19,20 @@
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "0.12.8",
-    "@cloudflare/workers-types": "^4.20260203.0",
+    "@cloudflare/workers-types": "^4.20260210.0",
     "@eslint/js": "^9.39.2",
     "@types/mime-db": "^1.43.6",
     "@types/mime-types": "^3.0.1",
     "@types/pako": "^2.0.4",
-    "@typescript-eslint/eslint-plugin": "^8.54.0",
-    "@typescript-eslint/parser": "^8.54.0",
+    "@typescript-eslint/eslint-plugin": "^8.55.0",
+    "@typescript-eslint/parser": "^8.55.0",
     "@vitest/ui": "3.2.4",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.8.1",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.54.0",
+    "typescript-eslint": "^8.55.0",
     "vitest": "3.2.4",
-    "wrangler": "^4.62.0"
+    "wrangler": "^4.64.0"
   }
 }

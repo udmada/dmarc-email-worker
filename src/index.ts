@@ -21,6 +21,10 @@ const TRUSTED_REPORTERS = new Set([
 ]);
 
 export default {
+  fetch(): Response {
+    return new Response("", { status: 204 });
+  },
+
   async email(message: ForwardableEmailMessage, env: Env): Promise<void> {
     // Rate limiting per sender domain
     const fromDomain = message.from.split("@")[1]?.toLowerCase() ?? "unknown";

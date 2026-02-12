@@ -1,32 +1,31 @@
 amends "package://github.com/jdx/hk/releases/download/v1.28.0/hk@1.28.0#/Config.pkl"
 
 hooks {
-    ["pre-commit"] {
-        fix = true
-        stash = "git"
-        steps {
-            ["oxfmt"] {
-                glob = List("**/*.{ts,js,json,md,yml,yaml}")
-                check = "mise run pretty"
-                fix = "pnpm exec oxfmt src/"
-            }
-            ["oxlint"] {
-                glob = List("src/**/*.ts")
-                check = "mise run lint"
-                fix = "pnpm exec oxlint --type-aware --fix -fix-suggestions"
-            }
-            ["pkl-workflows"] {
-                glob = List(".github/pkl-workflows/*.pkl")
-                check = #"mise exec -- pkl eval .github/pkl-workflows/*.pkl -o ".github/workflows/%{moduleName}.yml" && pnpm exec oxfmt .github/workflows/*.yml && git add .github/workflows/*.yml"#
-                exclusive = true
-            }
-        }
+  ["pre-commit"] {
+    fix = true
+    stash = "git"
+    steps {
+      ["oxfmt"] {
+        check = "mise run pretty"
+        fix = "pnpm exec oxfmt src/"
+      }
+      ["oxlint"] {
+        check = "mise run lint"
+        fix = "pnpm exec oxlint --type-aware --fix --fix-suggestions"
+      }
+      ["pkl-workflows"] {
+        glob = List(".github/pkl-workflows/*.pkl")
+        check =
+          #"mise exec -- pkl eval .github/pkl-workflows/*.pkl -o ".github/workflows/%{moduleName}.yml" && pnpm exec oxfmt .github/workflows/*.yml && git add .github/workflows/*.yml"#
+        exclusive = true
+      }
     }
-    ["pre-push"] {
-        steps {
-            ["test"] {
-                check = "mise run test"
-            }
-        }
+  }
+  ["pre-push"] {
+    steps {
+      ["test"] {
+        check = "mise run test"
+      }
     }
+  }
 }

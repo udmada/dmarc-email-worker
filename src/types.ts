@@ -1,11 +1,9 @@
-import type { ReplyQueue } from "./reply-queue";
-
 export interface Env {
   ANALYTICS: AnalyticsEngineDataset;
   DB: D1Database;
   HYPERDRIVE?: Hyperdrive;
   EMAIL?: SendEmail;
-  REPLY_QUEUE?: DurableObjectNamespace<ReplyQueue>;
+  REPLY_QUEUE?: Queue<ReplyMessage>;
   R2_BUCKET: R2Bucket;
   RATE_LIMIT: RateLimit;
   SENDER_EMAIL: string;
@@ -17,7 +15,6 @@ export interface ReplyMessage {
   replyTo: string;
   reportId: string;
   subject: string;
-  sendAt: number;
 }
 
 export interface DMARCReport {

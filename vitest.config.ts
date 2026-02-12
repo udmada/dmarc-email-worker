@@ -10,14 +10,6 @@ export default defineWorkersConfig({
     includeSource: ["src/**/*.ts"],
     poolOptions: {
       workers: {
-        // Disabled because DO alarms conflict with isolated storage teardown.
-        // See: https://developers.cloudflare.com/workers/testing/vitest-integration/known-issues/#isolated-storage
-        isolatedStorage: false,
-        miniflare: {
-          durableObjects: {
-            REPLY_QUEUE: "ReplyQueue",
-          },
-        },
         wrangler: { configPath: "./wrangler.toml" },
       },
     },

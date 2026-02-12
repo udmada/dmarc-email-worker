@@ -24,14 +24,18 @@ database_name = "dmarc_reports"
 # binding = "HYPERDRIVE"
 # id = "YOUR_HYPERDRIVE_ID"  # Replace with your Hyperdrive config ID
 
-# Durable Object for delayed reply emails (optional, free tier)
-[durable_objects]
-bindings = [{ name = "REPLY_QUEUE", class_name = "ReplyQueue" }]
-[[migrations]]
-tag = "v1"
-new_sqlite_classes = ["ReplyQueue"]
+# Queue for delayed reply emails
+[[queues.producers]]
+binding = "REPLY_QUEUE"
+queue = "dmarc-reply-emails"
 
-# Email Sending capability (optional, used with reply DO)
+[[queues.consumers]]
+queue = "dmarc-reply-emails"
+max_batch_size = 10
+max_retries = 5
+dead_letter_queue = "dmarc-reply-emails-dlq"
+
+# Email Sending capability (optional, used with reply queue)
 [[send_email]]
 name = "EMAIL"
 

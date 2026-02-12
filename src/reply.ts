@@ -17,15 +17,15 @@ export async function queueReply(
     return;
   }
 
-  const id = env.REPLY_QUEUE.idFromName("default");
-  const stub = env.REPLY_QUEUE.get(id);
-  await stub.enqueue({
-    messageId: msgId,
-    replyTo: message.from,
-    reportId: reportId,
-    subject: message.headers.get("Subject") ?? "DMARC Report",
-    sendAt: Date.now() + 60 * 60 * 1000,
-  });
+  await env.REPLY_QUEUE.send(
+    {
+      messageId: msgId,
+      replyTo: message.from,
+      reportId: reportId,
+      subject: message.headers.get("Subject") ?? "DMARC Report",
+    },
+    { delaySeconds: 3600 },
+  );
 }
 
 export async function sendReply(msg: ReplyMessage, env: Env): Promise<void> {

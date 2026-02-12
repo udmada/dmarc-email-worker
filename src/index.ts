@@ -1,12 +1,11 @@
-export { ReplyQueue } from "./reply-queue";
 import pako from "pako";
 import PostalMime from "postal-mime";
 
 import { parseDMARCReportFromString } from "./dmarc";
-import { queueReply } from "./reply";
+import { queueReply, sendReply } from "./reply";
 import { storeReport, storeTLSReport } from "./storage";
 import { parseTLSReport } from "./tlsrpt";
-import type { Env } from "./types";
+import type { Env, ReplyMessage } from "./types";
 
 const TRUSTED_REPORTERS = new Set([
   "google.com",
@@ -24,6 +23,18 @@ const TRUSTED_REPORTERS = new Set([
 export default {
   fetch(): Response {
     return new Response("", { status: 204 });
+  },
+
+  async queue(batch: MessageBatch<ReplyMessage>, env: Env): Promise<void> {
+    for (const msg of batch.messages) {
+      try {
+        await sendReply(msg.body, env);
+        msg.ack();
+      } catch (e) {
+        console.error(`Failed to send reply for ${msg.body.reportId}: ${String(e)}`);
+        msg.retry();
+      }
+    }
   },
 
   async email(message: ForwardableEmailMessage, env: Env): Promise<void> {
@@ -88,7 +99,7 @@ export default {
       }
     }
   },
-} satisfies ExportedHandler<Env>;
+} satisfies ExportedHandler<Env, ReplyMessage>;
 
 // Optimized: Single decompression + detection
 function detectAndDecompress(attachment: { mimeType?: string; content: ArrayBuffer | string }): {

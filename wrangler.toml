@@ -25,6 +25,8 @@ database_name = "dmarc_reports"
 # id = "YOUR_HYPERDRIVE_ID"  # Replace with your Hyperdrive config ID
 
 # Delete legacy ReplyQueue Durable Object (migrated to Queues)
+[durable_objects]
+bindings = []
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["ReplyQueue"]

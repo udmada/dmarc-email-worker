@@ -36,7 +36,7 @@ deleted_classes = ["ReplyQueue"]
 
 # Queue for delayed reply emails
 [[queues.producers]]
-binding = "REPLY_QUEUE"
+binding = "EMAIL_QUEUE"
 queue = "dmarc-reply-emails"
 
 [[queues.consumers]]

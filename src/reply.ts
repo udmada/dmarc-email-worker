@@ -8,7 +8,7 @@ export async function queueReply(
   reportId: string,
   env: Env,
 ): Promise<void> {
-  if (env.REPLY_QUEUE === undefined) {
+  if (env.EMAIL_QUEUE === undefined) {
     return;
   }
 
@@ -17,7 +17,7 @@ export async function queueReply(
     return;
   }
 
-  await env.REPLY_QUEUE.send(
+  await env.EMAIL_QUEUE.send(
     {
       messageId: msgId,
       replyTo: message.from,

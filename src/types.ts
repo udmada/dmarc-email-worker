@@ -3,7 +3,7 @@ export interface Env {
   DB: D1Database;
   HYPERDRIVE?: Hyperdrive;
   EMAIL?: SendEmail;
-  REPLY_QUEUE?: Queue<ReplyMessage>;
+  EMAIL_QUEUE?: Queue<ReplyMessage>;
   R2_BUCKET: R2Bucket;
   RATE_LIMIT: RateLimit;
   SENDER_EMAIL: string;

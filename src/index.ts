@@ -57,8 +57,11 @@ export default {
       return;
     }
 
-    // Security: Whitelist trusted reporters
-    if (!TRUSTED_REPORTERS.has(fromDomain)) {
+    // Security: Whitelist trusted reporters (match exact domain or subdomains)
+    const isTrusted = [...TRUSTED_REPORTERS].some(
+      (trusted) => fromDomain === trusted || fromDomain.endsWith(`.${trusted}`),
+    );
+    if (!isTrusted) {
       console.warn(`Untrusted reporter: ${fromDomain}`);
       return;
     }

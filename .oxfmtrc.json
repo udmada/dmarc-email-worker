@@ -7,7 +7,7 @@
     "groups": [
       ["builtin"],
       ["type-import"],
-      ["side-effect"],
+      ["side_effect"],
       ["external", "type-external"],
       ["internal", "type-internal"],
       ["parent", "type-parent"],

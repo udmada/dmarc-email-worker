@@ -1,5 +1,5 @@
-import PostalMime from "postal-mime";
 import { unzipSync, strFromU8 } from "fflate";
+import PostalMime from "postal-mime";
 
 import { parseDMARCReportFromString } from "./dmarc";
 import { queueReply, sendReply } from "./reply";
@@ -45,7 +45,7 @@ export default {
         }
       }
       cursor = list.truncated ? list.cursor : undefined;
-    } while (cursor);
+    } while (cursor !== undefined);
 
     return Response.json(results);
   },

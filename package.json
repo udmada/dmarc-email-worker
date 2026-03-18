@@ -11,11 +11,11 @@
   },
   "dependencies": {
     "fast-xml-parser": "^5.5.6",
+    "fflate": "^0.8.2",
     "mime-db": "^1.54.0",
     "mimetext": "^3.0.28",
     "postal-mime": "^2.7.4",
-    "postgres": "^3.4.8",
-    "unzipit": "^1.4.3"
+    "postgres": "^3.4.8"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "0.13.2",

@@ -1,5 +1,5 @@
 import PostalMime from "postal-mime";
-import { unzip } from "unzipit";
+import { unzipSync, strFromU8 } from "fflate";
 
 import { parseDMARCReportFromString } from "./dmarc";
 import { queueReply, sendReply } from "./reply";
@@ -145,7 +145,7 @@ async function processAttachments(
 // Single decompression + detection — handles both gzip (.xml.gz) and zip (.xml.zip)
 async function detectAndDecompress(attachment: {
   mimeType?: string;
-  content: ArrayBuffer | string;
+  content: ArrayBuffer | Uint8Array | string;
 }): Promise<{ type: "dmarc" | "tlsrpt" | "unknown"; content: string }> {
   const raw =
     typeof attachment.content === "string"
@@ -157,9 +157,8 @@ async function detectAndDecompress(attachment: {
   // ZIP magic bytes: PK (0x50 0x4B)
   if (raw[0] === 0x50 && raw[1] === 0x4b) {
     try {
-      const { entries } = await unzip(raw);
-      const first = Object.values(entries)[0];
-      content = first ? new TextDecoder().decode(await first.arrayBuffer()) : "";
+      const entries = Object.values(unzipSync(raw));
+      content = entries.length > 0 ? strFromU8(entries[0]) : "";
     } catch {
       content = "";
     }

@@ -17,7 +17,7 @@ dataset = "dmarc_reports"
 [[d1_databases]]
 binding = "DB"
 database_name = "dmarc_reports"
-# database_id = "YOUR_D1_DATABASE_ID" # Replace with your D1 database ID
+database_id = "0acb0daf-685a-4617-a248-4255e36d1516"
 
 # Hyperdrive for PostgreSQL connection pooling (optional)
 # [[hyperdrive]]

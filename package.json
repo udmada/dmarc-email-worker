@@ -1,6 +1,6 @@
 {
   "name": "dmarc-reports-email-worker",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "scripts": {
     "deploy": "pnpm exec wrangler deploy",
     "format": "pnpm exec oxfmt --no-error-on-unmatched-pattern",
@@ -10,26 +10,24 @@
     "test": "pnpm exec oxfmt --check && pnpm exec oxlint --type-aware"
   },
   "dependencies": {
-    "fast-xml-parser": "^5.5.5",
+    "fast-xml-parser": "^5.5.6",
     "mime-db": "^1.54.0",
     "mimetext": "^3.0.28",
-    "pako": "^2.1.0",
-    "postal-mime": "^2.7.3",
+    "postal-mime": "^2.7.4",
     "postgres": "^3.4.8",
     "unzipit": "^1.4.3"
   },
   "devDependencies": {
-    "@cloudflare/vitest-pool-workers": "0.13.0",
-    "@cloudflare/workers-types": "^4.20260313.1",
+    "@cloudflare/vitest-pool-workers": "0.13.2",
+    "@cloudflare/workers-types": "^4.20260317.1",
     "@types/mime-db": "^1.43.6",
     "@types/mime-types": "^3.0.1",
-    "@types/pako": "^2.0.4",
     "@vitest/ui": "4.1.0",
     "oxfmt": "latest",
     "oxlint": "latest",
     "oxlint-tsgolint": "^0.17.0",
     "typescript": "^5.9.3",
     "vitest": "4.1.0",
-    "wrangler": "^4.73.0"
+    "wrangler": "^4.75.0"
   }
 }

@@ -1,5 +1,5 @@
-import pako from "pako";
 import PostalMime from "postal-mime";
+import { unzip } from "unzipit";
 
 import { parseDMARCReportFromString } from "./dmarc";
 import { queueReply, sendReply } from "./reply";
@@ -21,8 +21,33 @@ const TRUSTED_REPORTERS = new Set([
 ]);
 
 export default {
-  fetch(): Response {
-    return new Response("", { status: 204 });
+  async fetch(request: Request, env: Env): Promise<Response> {
+    if (request.method !== "POST" || new URL(request.url).pathname !== "/replay") {
+      return new Response("", { status: 204 });
+    }
+
+    const results: Record<string, string> = {};
+    let cursor: string | undefined;
+
+    do {
+      const list = await env.R2_BUCKET.list({ prefix: "raw-emails/", cursor });
+      for (const obj of list.objects) {
+        try {
+          const r2obj = await env.R2_BUCKET.get(obj.key);
+          if (!r2obj) continue;
+          const { processed, skipped } = await processAttachments(
+            new Uint8Array(await r2obj.arrayBuffer()),
+            env,
+          );
+          results[obj.key] = `processed=${processed} skipped=${skipped}`;
+        } catch (e) {
+          results[obj.key] = `error: ${String(e)}`;
+        }
+      }
+      cursor = list.truncated ? list.cursor : undefined;
+    } while (cursor);
+
+    return Response.json(results);
   },
 
   async queue(batch: MessageBatch<ReplyMessage>, env: Env): Promise<void> {
@@ -74,52 +99,78 @@ export default {
       return;
     }
 
-    // Parse email from already-read buffer
-    const rawEmail = new Uint8Array(arrayBuffer);
-    const parsed = await PostalMime.parse(rawEmail);
-
-    if (parsed.attachments.length === 0) {
-      console.error("No attachments found");
-      return;
-    }
-
-    // Process attachments
-    for (const attachment of parsed.attachments) {
-      const { type, content } = detectAndDecompress({
-        content: attachment.content,
-        mimeType: attachment.mimeType,
-      });
-
-      if (type === "dmarc") {
-        const report = parseDMARCReportFromString(content);
-        await storeReport(report, "dmarc", env);
-        await queueReply(message, report.reportId, env);
-      } else if (type === "tlsrpt") {
-        const report = parseTLSReport(content);
-        if (report !== null) {
-          await storeTLSReport(report, env);
-        }
-      }
+    const { processed } = await processAttachments(new Uint8Array(arrayBuffer), env, message);
+    if (processed === 0) {
+      console.error("No reports found in attachments");
     }
   },
 } satisfies ExportedHandler<Env, ReplyMessage>;
 
-// Optimized: Single decompression + detection
-function detectAndDecompress(attachment: { mimeType?: string; content: ArrayBuffer | string }): {
-  type: "dmarc" | "tlsrpt" | "unknown";
-  content: string;
-} {
-  let content: string;
+async function processAttachments(
+  rawEmail: Uint8Array,
+  env: Env,
+  message?: ForwardableEmailMessage,
+): Promise<{ processed: number; skipped: number }> {
+  const parsed = await PostalMime.parse(rawEmail);
+  let processed = 0;
+  let skipped = 0;
+
+  for (const attachment of parsed.attachments) {
+    const { type, content } = await detectAndDecompress({
+      content: attachment.content,
+      mimeType: attachment.mimeType,
+    });
+
+    if (type === "dmarc") {
+      const report = parseDMARCReportFromString(content);
+      await storeReport(report, "dmarc", env);
+      if (message) await queueReply(message, report.reportId, env);
+      processed++;
+    } else if (type === "tlsrpt") {
+      const report = parseTLSReport(content);
+      if (report !== null) {
+        await storeTLSReport(report, env);
+        processed++;
+      } else {
+        skipped++;
+      }
+    } else {
+      skipped++;
+    }
+  }
+
+  return { processed, skipped };
+}
+
+// Single decompression + detection — handles both gzip (.xml.gz) and zip (.xml.zip)
+async function detectAndDecompress(attachment: {
+  mimeType?: string;
+  content: ArrayBuffer | string;
+}): Promise<{ type: "dmarc" | "tlsrpt" | "unknown"; content: string }> {
   const raw =
     typeof attachment.content === "string"
       ? new TextEncoder().encode(attachment.content)
       : new Uint8Array(attachment.content);
 
-  try {
-    const decompressed = pako.ungzip(raw);
-    content = new TextDecoder().decode(decompressed);
-  } catch {
-    content = new TextDecoder().decode(raw);
+  let content: string;
+
+  // ZIP magic bytes: PK (0x50 0x4B)
+  if (raw[0] === 0x50 && raw[1] === 0x4b) {
+    try {
+      const { entries } = await unzip(raw);
+      const first = Object.values(entries)[0];
+      content = first ? new TextDecoder().decode(await first.arrayBuffer()) : "";
+    } catch {
+      content = "";
+    }
+  } else {
+    try {
+      content = await new Response(
+        new Response(raw).body!.pipeThrough(new DecompressionStream("gzip")),
+      ).text();
+    } catch {
+      content = new TextDecoder().decode(raw);
+    }
   }
 
   if (content.includes("<feedback>") || content.includes("<?xml")) {

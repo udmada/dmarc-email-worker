@@ -24,7 +24,7 @@ export async function storeReport(
   ]);
 }
 
-export async function storeTLSReport(report: TLSReport, env: Env): Promise<void> {
+export async function storeTLSReport(report: TLSReport, env: Pick<Env, "DB">): Promise<void> {
   const policies = report.policies ?? [];
 
   for (const policy of policies) {

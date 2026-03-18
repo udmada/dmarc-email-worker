@@ -22,8 +22,12 @@
     "strictFunctionTypes": true,
     "strictNullChecks": true,
     "target": "ES2024",
-    "types": ["@cloudflare/workers-types", "@cloudflare/vitest-pool-workers", "vitest/importMeta"]
+    "types": [
+      "@cloudflare/workers-types",
+      "@cloudflare/vitest-pool-workers/types",
+      "vitest/importMeta"
+    ]
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "worker-configuration.d.ts"],
   "exclude": ["node_modules"]
 }

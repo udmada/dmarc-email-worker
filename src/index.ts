@@ -164,9 +164,9 @@ async function detectAndDecompress(attachment: {
     }
   } else {
     try {
-      content = await new Response(
-        new Response(raw).body!.pipeThrough(new DecompressionStream("gzip")),
-      ).text();
+      const body = new Response(raw).body;
+      if (!body) throw new Error("no body");
+      content = await new Response(body.pipeThrough(new DecompressionStream("gzip"))).text();
     } catch {
       content = new TextDecoder().decode(raw);
     }

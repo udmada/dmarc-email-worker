@@ -1,6 +1,8 @@
-import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
+import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
+import { defineConfig } from "vitest/config";
 
-export default defineWorkersConfig({
+export default defineConfig({
+  plugins: [cloudflareTest({ wrangler: { configPath: "./wrangler.toml" } })],
   resolve: {
     alias: {
       mimetext: "mimetext/browser",
@@ -8,10 +10,5 @@ export default defineWorkersConfig({
   },
   test: {
     includeSource: ["src/**/*.ts"],
-    poolOptions: {
-      workers: {
-        wrangler: { configPath: "./wrangler.toml" },
-      },
-    },
   },
 });

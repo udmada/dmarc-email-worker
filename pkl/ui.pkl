@@ -1,0 +1,18 @@
+import "shared.pkl" as shared
+
+name = "dmarc-ui"
+main = "dist/_worker.js"
+compatibility_date = shared.compatibilityDate
+compatibility_flags = shared.compatibilityFlags
+
+d1_databases: Listing<Dynamic> = new {
+  new {
+    binding = shared.dmarcDb.binding
+    database_name = shared.dmarcDb.database_name
+    database_id = shared.dmarcDb.database_id
+  }
+}
+
+assets: Dynamic = new {
+  directory = "./dist/client"
+}

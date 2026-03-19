@@ -1,0 +1,16 @@
+module shared
+
+const compatibilityDate = "2026-02-04"
+const compatibilityFlags: Listing<String> = new Listing { "nodejs_compat" }
+
+class D1Binding {
+  binding: String
+  database_name: String
+  database_id: String
+}
+
+const dmarcDb = new D1Binding {
+  binding = "DB"
+  database_name = "dmarc_reports"
+  database_id = "0acb0daf-685a-4617-a248-4255e36d1516"
+}

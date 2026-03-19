@@ -1,28 +1,56 @@
 import { env } from "cloudflare:test";
 import { describe, it, expect, beforeAll } from "vitest";
 
-import { storeTLSReport } from "../storage";
-import type { NormalizedTLSReport } from "../types";
+import { storeReport, storeTLSReport } from "../storage";
+import type {
+  Env,
+  NormalizedTLSReport,
+  ParsedDMARCReport,
+  DMARCRecord,
+  SourceIP,
+  Domain,
+  ReportId,
+} from "../types";
+
+// env from cloudflare:test is ProvidedEnv (extends Env) but missing [vars] like
+// SENDER_EMAIL/SENDER_DOMAIN that are not bound in the test environment.
+// Cast is safe because storeReport only uses ANALYTICS and DB from env.
+const typedEnv = env as unknown as Env;
 
 beforeAll(async () => {
   await env.DB.batch([
     env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS dmarc_reports (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        report_id TEXT UNIQUE NOT NULL,
-        org_name TEXT NOT NULL,
-        domain TEXT NOT NULL,
-        begin_date INTEGER NOT NULL,
-        end_date INTEGER NOT NULL,
-        dkim_pass INTEGER DEFAULT 0,
-        dkim_fail INTEGER DEFAULT 0,
-        dkim_temperror INTEGER DEFAULT 0,
-        spf_pass INTEGER DEFAULT 0,
-        spf_fail INTEGER DEFAULT 0,
-        spf_temperror INTEGER DEFAULT 0,
-        policy_p TEXT NOT NULL,
-        raw_xml TEXT,
-        created_at INTEGER DEFAULT (strftime('%s', 'now'))
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        report_id   TEXT UNIQUE NOT NULL,
+        org_name    TEXT NOT NULL,
+        domain      TEXT NOT NULL,
+        begin_date  INTEGER NOT NULL,
+        end_date    INTEGER NOT NULL,
+        adkim       TEXT NOT NULL DEFAULT 'r',
+        aspf        TEXT NOT NULL DEFAULT 'r',
+        policy_p    TEXT NOT NULL,
+        policy_sp   TEXT,
+        policy_pct  INTEGER,
+        raw_xml     TEXT,
+        created_at  INTEGER DEFAULT (strftime('%s', 'now'))
+      )
+    `),
+    env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS dmarc_records (
+        id            INTEGER PRIMARY KEY AUTOINCREMENT,
+        -- FK constraint omitted — D1/SQLite does not enforce FKs without PRAGMA foreign_keys = ON
+        report_id     TEXT NOT NULL,
+        source_ip     TEXT NOT NULL,
+        count         INTEGER NOT NULL DEFAULT 1,
+        disposition   TEXT,
+        dkim_result   TEXT,
+        spf_result    TEXT,
+        header_from   TEXT,
+        envelope_from TEXT,
+        envelope_to   TEXT,
+        auth_results  TEXT,
+        created_at    INTEGER DEFAULT (strftime('%s', 'now'))
       )
     `),
     env.DB.prepare(`
@@ -41,6 +69,133 @@ beforeAll(async () => {
       )
     `),
   ]);
+});
+
+const BASE_RECORD: DMARCRecord = {
+  sourceIp: "1.2.3.4" as SourceIP,
+  count: 5,
+  policyEvaluated: { disposition: "none", dkim: "pass", spf: "pass" },
+  headerFrom: "example.com" as Domain,
+  envelopeFrom: "example.com" as Domain,
+  envelopeTo: "example.com" as Domain,
+  authResults: [
+    { type: "dkim", domain: "example.com" as Domain, selector: "s1", result: "pass" },
+    { type: "spf", domain: "example.com" as Domain, result: "pass" },
+  ],
+};
+
+const BASE_REPORT: Omit<ParsedDMARCReport, "reportId" | "records"> = {
+  orgName: "google.com",
+  domain: "example.com" as Domain,
+  beginDate: 1704067200,
+  endDate: 1704153599,
+  adkim: "s",
+  aspf: "r",
+  policyP: "reject",
+  policySp: "none",
+  policyPct: 100,
+  rawXml: "<xml/>",
+};
+
+describe("storeReport", () => {
+  it("inserts into dmarc_reports with policy fields", async () => {
+    const report: ParsedDMARCReport = {
+      ...BASE_REPORT,
+      reportId: "store-test-1" as ReportId,
+      records: [BASE_RECORD],
+    };
+
+    await storeReport(report, "dmarc", typedEnv);
+
+    const row = await env.DB.prepare("SELECT * FROM dmarc_reports WHERE report_id = ?")
+      .bind("store-test-1")
+      .first();
+
+    expect(row).not.toBeNull();
+    if (!row) return;
+    expect(row["org_name"]).toBe("google.com");
+    expect(row["adkim"]).toBe("s");
+    expect(row["aspf"]).toBe("r");
+    expect(row["policy_p"]).toBe("reject");
+    expect(row["policy_sp"]).toBe("none");
+    expect(row["policy_pct"]).toBe(100);
+  });
+
+  it("inserts dmarc_records rows for each record", async () => {
+    const report: ParsedDMARCReport = {
+      ...BASE_REPORT,
+      reportId: "store-test-2" as ReportId,
+      records: [
+        BASE_RECORD,
+        {
+          ...BASE_RECORD,
+          sourceIp: "5.6.7.8" as SourceIP,
+          count: 2,
+          policyEvaluated: { disposition: "quarantine", dkim: "fail", spf: "fail" },
+        },
+      ],
+    };
+
+    await storeReport(report, "dmarc", typedEnv);
+
+    const results = await env.DB.prepare(
+      "SELECT * FROM dmarc_records WHERE report_id = ? ORDER BY source_ip",
+    )
+      .bind("store-test-2")
+      .all();
+
+    expect(results.results).toHaveLength(2);
+    expect(results.results[0]["source_ip"]).toBe("1.2.3.4");
+    expect(results.results[0]["dkim_result"]).toBe("pass");
+    expect(results.results[0]["header_from"]).toBe("example.com");
+    expect(results.results[1]["source_ip"]).toBe("5.6.7.8");
+    expect(results.results[1]["dkim_result"]).toBe("fail");
+    expect(results.results[1]["disposition"]).toBe("quarantine");
+  });
+
+  it("serialises auth_results as JSON", async () => {
+    const report: ParsedDMARCReport = {
+      ...BASE_REPORT,
+      reportId: "store-test-3" as ReportId,
+      records: [BASE_RECORD],
+    };
+
+    await storeReport(report, "dmarc", typedEnv);
+
+    const row = await env.DB.prepare("SELECT auth_results FROM dmarc_records WHERE report_id = ?")
+      .bind("store-test-3")
+      .first();
+
+    expect(row).not.toBeNull();
+    if (!row) return;
+    const parsed = JSON.parse(row["auth_results"] as string) as Array<{
+      type: string;
+      selector?: string;
+    }>;
+    expect(parsed).toHaveLength(2);
+    expect(parsed[0].type).toBe("dkim");
+    expect(parsed[0].selector).toBe("s1");
+    expect(parsed[1].type).toBe("spf");
+  });
+
+  it("does not insert duplicate reports (ON CONFLICT DO NOTHING)", async () => {
+    const report: ParsedDMARCReport = {
+      ...BASE_REPORT,
+      reportId: "store-dedup" as ReportId,
+      records: [],
+    };
+
+    await storeReport(report, "dmarc", typedEnv);
+    await storeReport(report, "dmarc", typedEnv);
+
+    const result = await env.DB.prepare(
+      "SELECT COUNT(*) as c FROM dmarc_reports WHERE report_id = ?",
+    )
+      .bind("store-dedup")
+      .first();
+
+    expect(result?.["c"]).toBe(1);
+  });
 });
 
 describe("storeTLSReport", () => {
@@ -80,10 +235,7 @@ describe("storeTLSReport", () => {
       .first();
 
     expect(result).not.toBeNull();
-
-    if (result === null) {
-      return;
-    }
+    if (result === null) return;
     expect(result["org_name"]).toBe("google.com");
     expect(result["policy_domain"]).toBe("example.com");
     expect(result["policy_type"]).toBe("sts");
@@ -104,18 +256,12 @@ describe("storeTLSReport", () => {
         {
           "policy-type": "sts",
           "policy-domain": "a.com",
-          "summary": {
-            "total-successful-session-count": 10,
-            "total-failure-session-count": 0,
-          },
+          "summary": { "total-successful-session-count": 10, "total-failure-session-count": 0 },
         },
         {
           "policy-type": "dane",
           "policy-domain": "b.com",
-          "summary": {
-            "total-successful-session-count": 20,
-            "total-failure-session-count": 1,
-          },
+          "summary": { "total-successful-session-count": 20, "total-failure-session-count": 1 },
         },
       ],
     };

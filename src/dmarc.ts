@@ -1,6 +1,19 @@
 import { type X2jOptions, XMLParser } from "fast-xml-parser";
 
-import type { DMARCReport } from "./types";
+import type {
+  AuthResult,
+  DKIMAuthResult,
+  DMARCAlignment,
+  DMARCAuthResultType,
+  DMARCDisposition,
+  DMARCPassFail,
+  DMARCRecord,
+  Domain,
+  ParsedDMARCReport,
+  ReportId,
+  SPFAuthResult,
+  SourceIP,
+} from "./types";
 
 // XML DMARC Report Types (based on RFC 7489)
 interface XMLDateRange {
@@ -101,7 +114,7 @@ function isXMLDMARCFeedback(obj: unknown): obj is XMLDMARCFeedback {
   return "report_metadata" in obj || "policy_published" in obj;
 }
 
-export function parseDMARCReportFromString(xml: string): DMARCReport {
+export function parseDMARCReportFromString(xml: string): ParsedDMARCReport {
   const parsed = parseXML(xml);
 
   if (!isXMLDMARCFeedback(parsed)) {
@@ -109,84 +122,80 @@ export function parseDMARCReportFromString(xml: string): DMARCReport {
   }
 
   const feedback = parsed.feedback ?? parsed;
+  const meta = feedback.report_metadata;
+  const pub = feedback.policy_published;
 
-  const reportMetadata = feedback.report_metadata;
-  const policyPublished = feedback.policy_published;
-
-  const reportId = reportMetadata?.report_id ?? "";
-  const orgName = reportMetadata?.org_name ?? "";
-  const domain = policyPublished?.domain ?? "";
-  const beginDate = parseInt(reportMetadata?.date_range?.begin ?? "0");
-  const endDate = parseInt(reportMetadata?.date_range?.end ?? "0");
-  const policyP = policyPublished?.p ?? "none";
-
-  let dkimPass = 0,
-    dkimFail = 0,
-    dkimTemperror = 0;
-  let spfPass = 0,
-    spfFail = 0,
-    spfTemperror = 0;
-
-  const records = feedback.record;
-  const recordsArray: XMLDMARCRecord[] = !records
+  const rawRecords = feedback.record;
+  const xmlRecords: XMLDMARCRecord[] = !rawRecords
     ? []
-    : Array.isArray(records)
-      ? records
-      : [records];
+    : Array.isArray(rawRecords)
+      ? rawRecords
+      : [rawRecords];
 
-  for (const record of recordsArray) {
-    const authResults = record.auth_results;
-    if (!authResults) {
-      continue;
-    }
+  const records: DMARCRecord[] = xmlRecords.map((rec): DMARCRecord => {
+    const row = rec.row;
+    const identifiers = rec.identifiers;
+    const authData = rec.auth_results;
 
-    // DKIM results
-    const dkimElements = authResults.dkim ?? [];
+    const dkimElements = authData?.dkim ?? [];
     const dkimArray: XMLAuthResult[] = Array.isArray(dkimElements) ? dkimElements : [dkimElements];
 
-    for (const dkim of dkimArray) {
-      const dkimResult = dkim.result;
-      const result = typeof dkimResult === "string" ? dkimResult.toLowerCase() : "";
-      if (result === "pass") {
-        dkimPass++;
-      } else if (result === "fail") {
-        dkimFail++;
-      } else if (result === "temperror") {
-        dkimTemperror++;
-      }
-    }
-
-    // SPF results
-    const spfElements = authResults.spf ?? [];
+    const spfElements = authData?.spf ?? [];
     const spfArray: XMLAuthResult[] = Array.isArray(spfElements) ? spfElements : [spfElements];
 
-    for (const spf of spfArray) {
-      const spfResult = spf.result;
-      const result = typeof spfResult === "string" ? spfResult.toLowerCase() : "";
-      if (result === "pass") {
-        spfPass++;
-      } else if (result === "fail") {
-        spfFail++;
-      } else if (result === "temperror") {
-        spfTemperror++;
-      }
-    }
-  }
+    const authResults: AuthResult[] = [
+      ...dkimArray.map(
+        (d): DKIMAuthResult => ({
+          type: "dkim",
+          domain: (d.domain ?? "") as Domain,
+          selector: d.selector ?? "",
+          result: (typeof d.result === "string"
+            ? d.result.toLowerCase()
+            : "none") as DMARCAuthResultType,
+        }),
+      ),
+      ...spfArray.map(
+        (s): SPFAuthResult => ({
+          type: "spf",
+          domain: (s.domain ?? "") as Domain,
+          result: (typeof s.result === "string"
+            ? s.result.toLowerCase()
+            : "none") as DMARCAuthResultType,
+        }),
+      ),
+    ];
+
+    const count =
+      typeof row?.count === "number" ? row.count : parseInt(String(row?.count ?? "1"), 10);
+
+    return {
+      sourceIp: (row?.source_ip ?? "") as SourceIP,
+      count: isNaN(count) ? 1 : count,
+      policyEvaluated: {
+        disposition: (row?.policy_evaluated?.disposition ?? "none") as DMARCDisposition,
+        dkim: (row?.policy_evaluated?.dkim ?? "fail") as DMARCPassFail,
+        spf: (row?.policy_evaluated?.spf ?? "fail") as DMARCPassFail,
+      },
+      headerFrom: (identifiers?.header_from ?? "") as Domain,
+      envelopeFrom: (identifiers?.envelope_from ?? "") as Domain,
+      envelopeTo: (identifiers?.envelope_to ?? "") as Domain,
+      authResults,
+    };
+  });
 
   return {
-    reportId,
-    orgName,
-    domain,
-    beginDate,
-    endDate,
-    dkimPass,
-    dkimFail,
-    dkimTemperror,
-    spfPass,
-    spfFail,
-    spfTemperror,
-    policyP,
+    reportId: (meta?.report_id ?? "") as ReportId,
+    orgName: meta?.org_name ?? "",
+    domain: (pub?.domain ?? "") as Domain,
+    beginDate: parseInt(meta?.date_range?.begin ?? "0", 10),
+    endDate: parseInt(meta?.date_range?.end ?? "0", 10),
+    adkim: (pub?.adkim ?? "r") as DMARCAlignment,
+    aspf: (pub?.aspf ?? "r") as DMARCAlignment,
+    policyP: (pub?.p ?? "none") as DMARCDisposition,
+    policySp: (pub?.sp ?? "none") as DMARCDisposition,
+    policyPct: parseInt(pub?.pct ?? "100", 10),
     rawXml: xml,
+    records,
   };
 }
 
@@ -194,7 +203,7 @@ if (import.meta.vitest) {
   const { describe, it, expect } = import.meta.vitest;
 
   describe("parseDMARCReportFromString", () => {
-    it("parses a standard DMARC report with feedback wrapper", () => {
+    it("parses report metadata and policy_published fields", () => {
       const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <feedback>
   <report_metadata>
@@ -207,18 +216,28 @@ if (import.meta.vitest) {
   </report_metadata>
   <policy_published>
     <domain>example.com</domain>
+    <adkim>s</adkim>
+    <aspf>r</aspf>
     <p>reject</p>
+    <sp>none</sp>
+    <pct>100</pct>
   </policy_published>
   <record>
     <row>
       <source_ip>1.2.3.4</source_ip>
       <count>5</count>
+      <policy_evaluated>
+        <disposition>none</disposition>
+        <dkim>pass</dkim>
+        <spf>pass</spf>
+      </policy_evaluated>
     </row>
     <identifiers>
       <header_from>example.com</header_from>
+      <envelope_from>example.com</envelope_from>
     </identifiers>
     <auth_results>
-      <dkim><domain>example.com</domain><result>pass</result></dkim>
+      <dkim><domain>example.com</domain><selector>s1</selector><result>pass</result></dkim>
       <spf><domain>example.com</domain><result>pass</result></spf>
     </auth_results>
   </record>
@@ -231,15 +250,98 @@ if (import.meta.vitest) {
       expect(report.domain).toBe("example.com");
       expect(report.beginDate).toBe(1704067200);
       expect(report.endDate).toBe(1704153599);
+      expect(report.adkim).toBe("s");
+      expect(report.aspf).toBe("r");
       expect(report.policyP).toBe("reject");
-      expect(report.dkimPass).toBe(1);
-      expect(report.dkimFail).toBe(0);
-      expect(report.spfPass).toBe(1);
-      expect(report.spfFail).toBe(0);
+      expect(report.policySp).toBe("none");
+      expect(report.policyPct).toBe(100);
       expect(report.rawXml).toBe(xml);
     });
 
-    it("parses a report with multiple records", () => {
+    it("parses per-record data: source_ip, count, policyEvaluated, identifiers", () => {
+      const xml = `<?xml version="1.0"?>
+<feedback>
+  <report_metadata>
+    <org_name>yahoo.com</org_name>
+    <report_id>rec-test</report_id>
+    <date_range><begin>1000</begin><end>2000</end></date_range>
+  </report_metadata>
+  <policy_published><domain>test.com</domain><p>quarantine</p></policy_published>
+  <record>
+    <row>
+      <source_ip>10.0.0.1</source_ip>
+      <count>3</count>
+      <policy_evaluated>
+        <disposition>quarantine</disposition>
+        <dkim>fail</dkim>
+        <spf>pass</spf>
+      </policy_evaluated>
+    </row>
+    <identifiers>
+      <header_from>test.com</header_from>
+      <envelope_from>bounce.test.com</envelope_from>
+      <envelope_to>inbox@example.com</envelope_to>
+    </identifiers>
+    <auth_results>
+      <dkim><domain>test.com</domain><selector>key1</selector><result>fail</result></dkim>
+      <spf><domain>test.com</domain><result>pass</result></spf>
+    </auth_results>
+  </record>
+</feedback>`;
+
+      const report = parseDMARCReportFromString(xml);
+
+      expect(report.records).toHaveLength(1);
+      const rec = report.records[0];
+      expect(rec.sourceIp).toBe("10.0.0.1");
+      expect(rec.count).toBe(3);
+      expect(rec.policyEvaluated.disposition).toBe("quarantine");
+      expect(rec.policyEvaluated.dkim).toBe("fail");
+      expect(rec.policyEvaluated.spf).toBe("pass");
+      expect(rec.headerFrom).toBe("test.com");
+      expect(rec.envelopeFrom).toBe("bounce.test.com");
+      expect(rec.envelopeTo).toBe("inbox@example.com");
+    });
+
+    it("parses authResults into DKIMAuthResult and SPFAuthResult", () => {
+      const xml = `<?xml version="1.0"?>
+<feedback>
+  <report_metadata>
+    <org_name>test</org_name>
+    <report_id>auth-test</report_id>
+    <date_range><begin>0</begin><end>0</end></date_range>
+  </report_metadata>
+  <policy_published><domain>d.com</domain><p>none</p></policy_published>
+  <record>
+    <row>
+      <source_ip>1.1.1.1</source_ip>
+      <count>1</count>
+      <policy_evaluated><disposition>none</disposition><dkim>pass</dkim><spf>pass</spf></policy_evaluated>
+    </row>
+    <auth_results>
+      <dkim><domain>d.com</domain><selector>sel1</selector><result>pass</result></dkim>
+      <spf><domain>d.com</domain><result>pass</result></spf>
+    </auth_results>
+  </record>
+</feedback>`;
+
+      const report = parseDMARCReportFromString(xml);
+      const authResults = report.records[0].authResults;
+
+      expect(authResults).toHaveLength(2);
+      const dkim = authResults.find((r) => r.type === "dkim");
+      const spf = authResults.find((r) => r.type === "spf");
+
+      expect(dkim?.type).toBe("dkim");
+      expect(dkim?.domain).toBe("d.com");
+      if (dkim?.type === "dkim") {
+        expect(dkim.selector).toBe("sel1");
+      }
+      expect(spf?.type).toBe("spf");
+      expect(spf?.domain).toBe("d.com");
+    });
+
+    it("parses multiple records", () => {
       const xml = `<?xml version="1.0"?>
 <feedback>
   <report_metadata>
@@ -247,44 +349,63 @@ if (import.meta.vitest) {
     <report_id>multi-rec</report_id>
     <date_range><begin>1000</begin><end>2000</end></date_range>
   </report_metadata>
-  <policy_published>
-    <domain>test.com</domain>
-    <p>quarantine</p>
-  </policy_published>
+  <policy_published><domain>test.com</domain><p>quarantine</p></policy_published>
   <record>
-    <auth_results>
-      <dkim><result>pass</result></dkim>
-      <spf><result>fail</result></spf>
-    </auth_results>
+    <row><source_ip>1.1.1.1</source_ip><count>2</count>
+      <policy_evaluated><disposition>none</disposition><dkim>pass</dkim><spf>pass</spf></policy_evaluated>
+    </row>
+    <auth_results><dkim><result>pass</result></dkim><spf><result>pass</result></spf></auth_results>
   </record>
   <record>
-    <auth_results>
-      <dkim><result>fail</result></dkim>
-      <spf><result>pass</result></spf>
-    </auth_results>
-  </record>
-  <record>
-    <auth_results>
-      <dkim><result>temperror</result></dkim>
-      <spf><result>temperror</result></spf>
-    </auth_results>
+    <row><source_ip>2.2.2.2</source_ip><count>1</count>
+      <policy_evaluated><disposition>reject</disposition><dkim>fail</dkim><spf>fail</spf></policy_evaluated>
+    </row>
+    <auth_results><dkim><result>fail</result></dkim><spf><result>fail</result></spf></auth_results>
   </record>
 </feedback>`;
 
       const report = parseDMARCReportFromString(xml);
-
-      expect(report.reportId).toBe("multi-rec");
-      expect(report.domain).toBe("test.com");
-      expect(report.policyP).toBe("quarantine");
-      expect(report.dkimPass).toBe(1);
-      expect(report.dkimFail).toBe(1);
-      expect(report.dkimTemperror).toBe(1);
-      expect(report.spfPass).toBe(1);
-      expect(report.spfFail).toBe(1);
-      expect(report.spfTemperror).toBe(1);
+      expect(report.records).toHaveLength(2);
+      expect(report.records[0].sourceIp).toBe("1.1.1.1");
+      expect(report.records[1].sourceIp).toBe("2.2.2.2");
+      expect(report.records[1].policyEvaluated.disposition).toBe("reject");
     });
 
-    it("parses a report without feedback wrapper (flat structure)", () => {
+    it("returns empty records array when no <record> elements", () => {
+      const xml = `<?xml version="1.0"?>
+<feedback>
+  <report_metadata>
+    <report_id>no-rec</report_id>
+    <date_range><begin>0</begin><end>0</end></date_range>
+  </report_metadata>
+  <policy_published><domain>x.com</domain><p>none</p></policy_published>
+</feedback>`;
+      const report = parseDMARCReportFromString(xml);
+      expect(report.records).toHaveLength(0);
+    });
+
+    it("defaults missing policy_published alignment fields to 'r' and pct to 100", () => {
+      const xml = `<?xml version="1.0"?>
+<feedback>
+  <report_metadata>
+    <report_id>defaults</report_id>
+    <date_range><begin>0</begin><end>0</end></date_range>
+  </report_metadata>
+  <policy_published><domain>x.com</domain><p>none</p></policy_published>
+</feedback>`;
+      const report = parseDMARCReportFromString(xml);
+      expect(report.adkim).toBe("r");
+      expect(report.aspf).toBe("r");
+      expect(report.policyPct).toBe(100);
+    });
+
+    it("throws on invalid XML structure", () => {
+      expect(() => parseDMARCReportFromString("<html><body>not dmarc</body></html>")).toThrow(
+        "Invalid XML structure",
+      );
+    });
+
+    it("parses report without feedback wrapper (flat structure)", () => {
       const xml = `<?xml version="1.0"?>
 <report_metadata>
   <org_name>microsoft.com</org_name>
@@ -294,93 +415,11 @@ if (import.meta.vitest) {
 <policy_published>
   <domain>flat.com</domain>
   <p>none</p>
-</policy_published>
-<record>
-  <auth_results>
-    <dkim><result>pass</result></dkim>
-    <spf><result>pass</result></spf>
-  </auth_results>
-</record>`;
-
+</policy_published>`;
       const report = parseDMARCReportFromString(xml);
-
       expect(report.reportId).toBe("flat-report");
       expect(report.orgName).toBe("microsoft.com");
       expect(report.domain).toBe("flat.com");
-      expect(report.dkimPass).toBe(1);
-      expect(report.spfPass).toBe(1);
-    });
-
-    it("handles multiple DKIM/SPF results per record", () => {
-      const xml = `<?xml version="1.0"?>
-<feedback>
-  <report_metadata>
-    <org_name>test</org_name>
-    <report_id>multi-auth</report_id>
-    <date_range><begin>0</begin><end>0</end></date_range>
-  </report_metadata>
-  <policy_published><domain>d.com</domain><p>none</p></policy_published>
-  <record>
-    <auth_results>
-      <dkim><result>pass</result></dkim>
-      <dkim><result>fail</result></dkim>
-      <spf><result>pass</result></spf>
-      <spf><result>pass</result></spf>
-    </auth_results>
-  </record>
-</feedback>`;
-
-      const report = parseDMARCReportFromString(xml);
-
-      expect(report.dkimPass).toBe(1);
-      expect(report.dkimFail).toBe(1);
-      expect(report.spfPass).toBe(2);
-    });
-
-    it("defaults missing optional fields", () => {
-      const xml = `<?xml version="1.0"?>
-<feedback>
-  <report_metadata></report_metadata>
-  <policy_published></policy_published>
-</feedback>`;
-
-      const report = parseDMARCReportFromString(xml);
-
-      expect(report.reportId).toBe("");
-      expect(report.orgName).toBe("");
-      expect(report.domain).toBe("");
-      expect(report.beginDate).toBe(0);
-      expect(report.endDate).toBe(0);
-      expect(report.policyP).toBe("none");
-      expect(report.dkimPass).toBe(0);
-      expect(report.spfPass).toBe(0);
-    });
-
-    it("throws on invalid XML structure", () => {
-      expect(() => parseDMARCReportFromString("<html><body>not dmarc</body></html>")).toThrow(
-        "Invalid XML structure",
-      );
-    });
-
-    it("handles record with no auth_results", () => {
-      const xml = `<?xml version="1.0"?>
-<feedback>
-  <report_metadata>
-    <report_id>no-auth</report_id>
-    <date_range><begin>0</begin><end>0</end></date_range>
-  </report_metadata>
-  <policy_published><domain>x.com</domain><p>none</p></policy_published>
-  <record>
-    <row><source_ip>1.2.3.4</source_ip></row>
-    <identifiers><header_from>x.com</header_from></identifiers>
-  </record>
-</feedback>`;
-
-      const report = parseDMARCReportFromString(xml);
-
-      expect(report.reportId).toBe("no-auth");
-      expect(report.dkimPass).toBe(0);
-      expect(report.spfPass).toBe(0);
     });
   });
 }

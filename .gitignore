@@ -17,3 +17,6 @@ node_modules/
 
 # Generated from Pkl
 ui/wrangler.json
+
+# Astro generated
+ui/.astro/

@@ -69,8 +69,6 @@ export interface GooglePolicy {
 
 export type RawTLSPolicy = RFCPolicy | GooglePolicy;
 
-export type NormalizedTLSReport = Omit<TLSReport, "policies"> & { policies?: RFCPolicy[] };
-
 export interface TLSReport {
   "organization-name": string;
   "date-range": {
@@ -81,3 +79,5 @@ export interface TLSReport {
   "report-id": string;
   "policies"?: RawTLSPolicy[];
 }
+
+export type NormalizedTLSReport = Omit<TLSReport, "policies"> & { policies?: RFCPolicy[] };

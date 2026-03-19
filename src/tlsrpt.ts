@@ -22,7 +22,13 @@ function isTLSReport(obj: unknown): obj is TLSReport {
 }
 
 function isGooglePolicy(p: RawTLSPolicy): p is GooglePolicy {
-  return "policy" in p && typeof p.policy === "object" && p.policy !== null;
+  return (
+    "policy" in p &&
+    typeof p.policy === "object" &&
+    p.policy !== null &&
+    typeof p.policy["policy-type"] === "string" &&
+    typeof p.policy["policy-domain"] === "string"
+  );
 }
 
 // Normalize RawTLSPolicy[] (RFC or Google format) to RFCPolicy[] at parse boundary.
@@ -38,10 +44,17 @@ function normalizePolicies(policies: RawTLSPolicy[]): RFCPolicy[] {
         },
       ];
     }
+    // RFC 8460 format: policy-type and policy-domain at top level
+    const policyType = entry["policy-type"];
+    const policyDomain = entry["policy-domain"];
+    if (policyType === undefined || policyDomain === undefined) {
+      console.warn("TLS-RPT RFC policy missing required fields, skipping");
+      return [];
+    }
     return [
       {
-        "policy-type": entry["policy-type"],
-        "policy-domain": entry["policy-domain"],
+        "policy-type": policyType,
+        "policy-domain": policyDomain,
         "summary": entry.summary,
         "failure-details": entry["failure-details"],
       },

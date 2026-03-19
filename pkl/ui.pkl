@@ -1,3 +1,5 @@
+module ui
+
 import "shared.pkl" as shared
 
 name = "dmarc-ui"

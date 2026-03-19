@@ -28,6 +28,10 @@ export async function storeTLSReport(report: TLSReport, env: Pick<Env, "DB">): P
   const policies = report.policies ?? [];
 
   for (const policy of policies) {
+    if (!policy["policy-domain"]) {
+      console.warn("TLS-RPT policy missing policy-domain, skipping");
+      continue;
+    }
     try {
       await env.DB.prepare(
         `

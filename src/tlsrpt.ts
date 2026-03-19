@@ -1,4 +1,10 @@
-import type { TLSReport } from "./types";
+import type {
+  RFCPolicy,
+  GooglePolicy,
+  RawTLSPolicy,
+  NormalizedTLSReport,
+  TLSReport,
+} from "./types";
 
 function isTLSReport(obj: unknown): obj is TLSReport {
   if (typeof obj !== "object" || obj === null) {
@@ -15,11 +21,42 @@ function isTLSReport(obj: unknown): obj is TLSReport {
   );
 }
 
-export function parseTLSReport(content: string): TLSReport | null {
+function isGooglePolicy(p: RawTLSPolicy): p is GooglePolicy {
+  return "policy" in p && typeof p.policy === "object" && p.policy !== null;
+}
+
+// Normalize RawTLSPolicy[] (RFC or Google format) to RFCPolicy[] at parse boundary.
+function normalizePolicies(policies: RawTLSPolicy[]): RFCPolicy[] {
+  return policies.flatMap((entry): RFCPolicy[] => {
+    if (isGooglePolicy(entry)) {
+      return [
+        {
+          "policy-type": entry.policy["policy-type"],
+          "policy-domain": entry.policy["policy-domain"],
+          "summary": entry.summary,
+          "failure-details": entry["failure-details"],
+        },
+      ];
+    }
+    return [
+      {
+        "policy-type": entry["policy-type"],
+        "policy-domain": entry["policy-domain"],
+        "summary": entry.summary,
+        "failure-details": entry["failure-details"],
+      },
+    ];
+  });
+}
+
+export function parseTLSReport(content: string): NormalizedTLSReport | null {
   try {
     const parsed: unknown = JSON.parse(content);
     if (isTLSReport(parsed)) {
-      return parsed;
+      return {
+        ...parsed,
+        policies: parsed.policies ? normalizePolicies(parsed.policies) : undefined,
+      };
     }
     console.error("Invalid TLS-RPT structure");
     return null;

@@ -34,6 +34,43 @@ export interface DMARCReport {
 }
 
 // RFC 8460 TLS-RPT (kebab-case per spec)
+
+export type PolicyType = "sts" | "dane" | "dane-only" | "no-policy-found";
+
+export interface TLSFailureDetail {
+  "result-type": string;
+  "sending-mta-ip": string;
+  "receiving-mx-hostname": string;
+  "failed-session-count": number;
+}
+
+export interface TLSPolicySummary {
+  "total-successful-session-count": number;
+  "total-failure-session-count": number;
+}
+
+// RFC 8460 §5.2: policy-type and policy-domain at top level
+export interface RFCPolicy {
+  "policy-type": PolicyType;
+  "policy-domain": string;
+  "summary": TLSPolicySummary;
+  "failure-details"?: TLSFailureDetail[];
+}
+
+// Google's non-standard format: policy fields nested under "policy"
+export interface GooglePolicy {
+  "policy": {
+    "policy-type": PolicyType;
+    "policy-domain": string;
+  };
+  "summary": TLSPolicySummary;
+  "failure-details"?: TLSFailureDetail[];
+}
+
+export type RawTLSPolicy = RFCPolicy | GooglePolicy;
+
+export type NormalizedTLSReport = Omit<TLSReport, "policies"> & { policies?: RFCPolicy[] };
+
 export interface TLSReport {
   "organization-name": string;
   "date-range": {
@@ -42,18 +79,5 @@ export interface TLSReport {
   };
   "contact-info": string;
   "report-id": string;
-  "policies"?: Array<{
-    "policy-type": "sts" | "dane" | "dane-only" | "no-policy-found";
-    "policy-domain": string;
-    "summary": {
-      "total-successful-session-count": number;
-      "total-failure-session-count": number;
-    };
-    "failure-details"?: Array<{
-      "result-type": string;
-      "sending-mta-ip": string;
-      "receiving-mx-hostname": string;
-      "failed-session-count": number;
-    }>;
-  }>;
+  "policies"?: RawTLSPolicy[];
 }

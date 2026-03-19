@@ -2,7 +2,7 @@ import { env } from "cloudflare:test";
 import { describe, it, expect, beforeAll } from "vitest";
 
 import { storeTLSReport } from "../storage";
-import type { TLSReport } from "../types";
+import type { NormalizedTLSReport } from "../types";
 
 beforeAll(async () => {
   await env.DB.batch([
@@ -45,7 +45,7 @@ beforeAll(async () => {
 
 describe("storeTLSReport", () => {
   it("inserts a TLS-RPT report into D1", async () => {
-    const report: TLSReport = {
+    const report: NormalizedTLSReport = {
       "organization-name": "google.com",
       "date-range": {
         "start-datetime": "2024-01-01T00:00:00Z",
@@ -92,7 +92,7 @@ describe("storeTLSReport", () => {
   });
 
   it("inserts multiple policies from one report", async () => {
-    const report: TLSReport = {
+    const report: NormalizedTLSReport = {
       "organization-name": "multi-policy.com",
       "date-range": {
         "start-datetime": "2024-02-01T00:00:00Z",
@@ -135,7 +135,7 @@ describe("storeTLSReport", () => {
   });
 
   it("handles a report with no policies without error", async () => {
-    const report: TLSReport = {
+    const report: NormalizedTLSReport = {
       "organization-name": "empty.com",
       "date-range": {
         "start-datetime": "2024-01-01T00:00:00Z",

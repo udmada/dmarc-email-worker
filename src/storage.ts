@@ -1,6 +1,6 @@
 import postgres from "postgres";
 
-import type { DMARCReport, Env, TLSReport } from "./types";
+import type { DMARCReport, Env, NormalizedTLSReport } from "./types";
 
 // Hyperdrive connection singleton
 let hyperdriveClient: ReturnType<typeof postgres> | null = null;
@@ -24,14 +24,13 @@ export async function storeReport(
   ]);
 }
 
-export async function storeTLSReport(report: TLSReport, env: Pick<Env, "DB">): Promise<void> {
+export async function storeTLSReport(
+  report: NormalizedTLSReport,
+  env: Pick<Env, "DB">,
+): Promise<void> {
   const policies = report.policies ?? [];
 
   for (const policy of policies) {
-    if (!policy["policy-domain"]) {
-      console.warn("TLS-RPT policy missing policy-domain, skipping");
-      continue;
-    }
     try {
       await env.DB.prepare(
         `
@@ -44,10 +43,10 @@ export async function storeTLSReport(report: TLSReport, env: Pick<Env, "DB">): P
         .bind(
           report["report-id"],
           report["organization-name"],
-          policy["policy-domain"] ?? null,
-          policy["policy-type"] ?? null,
-          policy.summary?.["total-successful-session-count"] ?? null,
-          policy.summary?.["total-failure-session-count"] ?? null,
+          policy["policy-domain"],
+          policy["policy-type"],
+          policy.summary["total-successful-session-count"],
+          policy.summary["total-failure-session-count"],
           JSON.stringify(policy["failure-details"] ?? []),
           new Date(report["date-range"]["start-datetime"]).getTime() / 1000,
           new Date(report["date-range"]["end-datetime"]).getTime() / 1000,

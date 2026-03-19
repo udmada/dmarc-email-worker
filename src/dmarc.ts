@@ -3,7 +3,6 @@ import { type X2jOptions, XMLParser } from "fast-xml-parser";
 import type {
   AuthResult,
   DKIMAuthResult,
-  DMARCAlignment,
   DMARCAuthResultType,
   DMARCDisposition,
   DMARCPassFail,
@@ -14,6 +13,7 @@ import type {
   SPFAuthResult,
   SourceIP,
 } from "./types";
+import { DMARC_AUTH_RESULT_TYPE } from "./types";
 
 // XML DMARC Report Types (based on RFC 7489)
 interface XMLDateRange {
@@ -93,6 +93,17 @@ interface XMLDMARCFeedback {
   record?: XMLDMARCRecord | XMLDMARCRecord[];
 }
 
+const AUTH_RESULT_TYPES = Object.keys(DMARC_AUTH_RESULT_TYPE) as DMARCAuthResultType[];
+
+function isAuthResultType(value: string): value is DMARCAuthResultType {
+  return (AUTH_RESULT_TYPES as ReadonlyArray<string>).includes(value);
+}
+
+function toAuthResultType(value: string | undefined): DMARCAuthResultType {
+  const lower = (value ?? "").toLowerCase();
+  return isAuthResultType(lower) ? lower : "none";
+}
+
 const XML_PARSER_OPTIONS: X2jOptions = {
   ignoreAttributes: false,
   attributeNamePrefix: "@_",
@@ -149,18 +160,14 @@ export function parseDMARCReportFromString(xml: string): ParsedDMARCReport {
           type: "dkim",
           domain: (d.domain ?? "") as Domain,
           selector: d.selector ?? "",
-          result: (typeof d.result === "string"
-            ? d.result.toLowerCase()
-            : "none") as DMARCAuthResultType,
+          result: toAuthResultType(d.result),
         }),
       ),
       ...spfArray.map(
         (s): SPFAuthResult => ({
           type: "spf",
           domain: (s.domain ?? "") as Domain,
-          result: (typeof s.result === "string"
-            ? s.result.toLowerCase()
-            : "none") as DMARCAuthResultType,
+          result: toAuthResultType(s.result),
         }),
       ),
     ];
@@ -172,7 +179,7 @@ export function parseDMARCReportFromString(xml: string): ParsedDMARCReport {
       sourceIp: (row?.source_ip ?? "") as SourceIP,
       count: isNaN(count) ? 1 : count,
       policyEvaluated: {
-        disposition: (row?.policy_evaluated?.disposition ?? "none") as DMARCDisposition,
+        disposition: row?.policy_evaluated?.disposition ?? "none",
         dkim: (row?.policy_evaluated?.dkim ?? "fail") as DMARCPassFail,
         spf: (row?.policy_evaluated?.spf ?? "fail") as DMARCPassFail,
       },
@@ -189,9 +196,9 @@ export function parseDMARCReportFromString(xml: string): ParsedDMARCReport {
     domain: (pub?.domain ?? "") as Domain,
     beginDate: parseInt(meta?.date_range?.begin ?? "0", 10),
     endDate: parseInt(meta?.date_range?.end ?? "0", 10),
-    adkim: (pub?.adkim ?? "r") as DMARCAlignment,
-    aspf: (pub?.aspf ?? "r") as DMARCAlignment,
-    policyP: (pub?.p ?? "none") as DMARCDisposition,
+    adkim: pub?.adkim ?? "r",
+    aspf: pub?.aspf ?? "r",
+    policyP: pub?.p ?? "none",
     policySp: (pub?.sp ?? "none") as DMARCDisposition,
     policyPct: parseInt(pub?.pct ?? "100", 10),
     rawXml: xml,

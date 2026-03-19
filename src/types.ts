@@ -41,7 +41,7 @@ const DMARC_DISPOSITION = {
 } as const;
 export type DMARCDisposition = keyof typeof DMARC_DISPOSITION;
 
-const DMARC_AUTH_RESULT_TYPE = {
+export const DMARC_AUTH_RESULT_TYPE = {
   pass: "pass",
   fail: "fail",
   temperror: "temperror",

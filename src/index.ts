@@ -3,7 +3,7 @@ import PostalMime from "postal-mime";
 
 import { parseDMARCReportFromString } from "./dmarc";
 import { queueReply, sendReply } from "./reply";
-import { storeReport, storeTLSReport } from "./storage";
+import { storeReport, storeTLSReport, storeRecordsInD1 } from "./storage";
 import { parseTLSReport } from "./tlsrpt";
 import type { Env, ReplyMessage } from "./types";
 
@@ -22,32 +22,22 @@ const TRUSTED_REPORTERS = new Set([
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
-    if (request.method !== "POST" || new URL(request.url).pathname !== "/replay") {
+    const { method } = request;
+    const { pathname } = new URL(request.url);
+
+    if (method !== "POST") {
       return new Response("", { status: 204 });
     }
 
-    const results: Record<string, string> = {};
-    let cursor: string | undefined;
+    if (pathname === "/replay") {
+      return handleReplay(env);
+    }
 
-    do {
-      const list = await env.R2_BUCKET.list({ prefix: "raw-emails/", cursor });
-      for (const obj of list.objects) {
-        try {
-          const r2obj = await env.R2_BUCKET.get(obj.key);
-          if (!r2obj) continue;
-          const { processed, skipped } = await processAttachments(
-            new Uint8Array(await r2obj.arrayBuffer()),
-            env,
-          );
-          results[obj.key] = `processed=${processed} skipped=${skipped}`;
-        } catch (e) {
-          results[obj.key] = `error: ${String(e)}`;
-        }
-      }
-      cursor = list.truncated ? list.cursor : undefined;
-    } while (cursor !== undefined);
+    if (pathname === "/migrate-records") {
+      return handleMigrateRecords(env);
+    }
 
-    return Response.json(results);
+    return new Response("", { status: 204 });
   },
 
   async queue(batch: MessageBatch<ReplyMessage>, env: Env): Promise<void> {
@@ -105,6 +95,56 @@ export default {
     }
   },
 } satisfies ExportedHandler<Env, ReplyMessage>;
+
+async function handleReplay(env: Env): Promise<Response> {
+  const results: Record<string, string> = {};
+  let cursor: string | undefined;
+
+  do {
+    const list = await env.R2_BUCKET.list({ prefix: "raw-emails/", cursor });
+    for (const obj of list.objects) {
+      try {
+        const r2obj = await env.R2_BUCKET.get(obj.key);
+        if (!r2obj) continue;
+        const { processed, skipped } = await processAttachments(
+          new Uint8Array(await r2obj.arrayBuffer()),
+          env,
+        );
+        results[obj.key] = `processed=${processed} skipped=${skipped}`;
+      } catch (e) {
+        results[obj.key] = `error: ${String(e)}`;
+      }
+    }
+    cursor = list.truncated ? list.cursor : undefined;
+  } while (cursor !== undefined);
+
+  return Response.json(results);
+}
+
+async function handleMigrateRecords(env: Env): Promise<Response> {
+  let migrated = 0;
+  const errors: string[] = [];
+
+  const rows = await env.DB.prepare(
+    `SELECT report_id, raw_xml FROM dmarc_reports
+     WHERE raw_xml IS NOT NULL
+     AND report_id NOT IN (SELECT DISTINCT report_id FROM dmarc_records)`,
+  ).all();
+
+  for (const row of rows.results) {
+    const reportId = row["report_id"] as string;
+    const rawXml = row["raw_xml"] as string;
+    try {
+      const report = parseDMARCReportFromString(rawXml);
+      await storeRecordsInD1(report.records, report.reportId, env.DB);
+      migrated++;
+    } catch (e) {
+      errors.push(`${reportId}: ${String(e)}`);
+    }
+  }
+
+  return Response.json({ migrated, errors });
+}
 
 async function processAttachments(
   rawEmail: Uint8Array,

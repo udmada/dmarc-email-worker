@@ -3,7 +3,7 @@ import PostalMime from "postal-mime";
 
 import { parseDMARCReportFromString } from "./dmarc";
 import { queueReply, sendReply } from "./reply";
-import { storeReport, storeTLSReport, storeRecordsInD1 } from "./storage";
+import { storeReport, storeTLSReport } from "./storage";
 import { parseTLSReport } from "./tlsrpt";
 import type { Env, ReplyMessage } from "./types";
 
@@ -31,10 +31,6 @@ export default {
 
     if (pathname === "/replay") {
       return handleReplay(env);
-    }
-
-    if (pathname === "/migrate-records") {
-      return handleMigrateRecords(env);
     }
 
     return new Response("", { status: 204 });
@@ -119,31 +115,6 @@ async function handleReplay(env: Env): Promise<Response> {
   } while (cursor !== undefined);
 
   return Response.json(results);
-}
-
-async function handleMigrateRecords(env: Env): Promise<Response> {
-  let migrated = 0;
-  const errors: string[] = [];
-
-  const rows = await env.DB.prepare(
-    `SELECT report_id, raw_xml FROM dmarc_reports
-     WHERE raw_xml IS NOT NULL
-     AND report_id NOT IN (SELECT DISTINCT report_id FROM dmarc_records)`,
-  ).all();
-
-  for (const row of rows.results) {
-    const reportId = row["report_id"] as string;
-    const rawXml = row["raw_xml"] as string;
-    try {
-      const report = parseDMARCReportFromString(rawXml);
-      await storeRecordsInD1(report.records, report.reportId, env.DB);
-      migrated++;
-    } catch (e) {
-      errors.push(`${reportId}: ${String(e)}`);
-    }
-  }
-
-  return Response.json({ migrated, errors });
 }
 
 async function processAttachments(

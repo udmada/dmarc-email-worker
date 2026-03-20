@@ -73,7 +73,7 @@ export async function getDashboardStats(db: D1Database): Promise<DashboardStats>
           SUM(CASE WHEN spf_result = 'pass' THEN 1 ELSE 0 END) as spf_pass
          FROM dmarc_records`,
       )
-      .first<{ total: number; dkim_pass: number; spf_pass: number }>(),
+      .first<{ total: number; dkim_pass: number | null; spf_pass: number | null }>(),
   ]);
 
   const total = records?.total ?? 0;
@@ -186,8 +186,8 @@ export async function getTlsReports(
   return { rows: rows.results, total: count?.n ?? 0, page, pageSize: PAGE_SIZE };
 }
 
-export async function getTlsReport(db: D1Database, id: string): Promise<TlsReportRow | null> {
-  return db.prepare("SELECT * FROM tls_reports WHERE report_id = ?").bind(id).first<TlsReportRow>();
+export async function getTlsReport(db: D1Database, id: number): Promise<TlsReportRow | null> {
+  return db.prepare("SELECT * FROM tls_reports WHERE id = ?").bind(id).first<TlsReportRow>();
 }
 
 export function formatDate(unixSeconds: number): string {

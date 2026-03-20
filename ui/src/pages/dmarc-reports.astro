@@ -15,7 +15,7 @@ const to = toParam ? Math.floor(new Date(toParam).getTime() / 1000) : undefined;
 const { rows, total, pageSize } = await getDmarcReports(db, page, domain, from, to);
 const pages = totalPages(total, pageSize);
 
-function pageUrl(p: number) {
+function pageUrl(p: number): string {
   const params = new URLSearchParams(url.searchParams);
   params.set("page", String(p));
   return `/dmarc-reports?${params}`;

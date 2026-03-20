@@ -97,7 +97,7 @@ const recordsPromise = getDmarcRecords(db, id);
             <h2 class="font-semibold">Per-Record Breakdown</h2>
             {report.raw_xml && (
               <a
-                href={`/dmarc-reports/${report.report_id}/raw`}
+                href={`/dmarc-reports/${id}/raw`}
                 class="btn btn-sm btn-ghost"
                 download={`${report.report_id}.xml`}
               >

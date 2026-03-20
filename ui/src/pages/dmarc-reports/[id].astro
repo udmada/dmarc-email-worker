@@ -66,6 +66,14 @@ const recordsPromise = getDmarcRecords(db, id);
     const dkimPct = total > 0 ? Math.round((dkimPass / total) * 100) : 0;
     const spfPct = total > 0 ? Math.round((spfPass / total) * 100) : 0;
 
+    if (records.length === 0) {
+      return (
+        <div class="card bg-base-200">
+          <div class="card-body text-base-content/50 text-sm">No records found for this report.</div>
+        </div>
+      );
+    }
+
     return (
       <>
         <!-- Stat cards -->

@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 
 export const GET: APIRoute = async ({ params, locals }) => {
+  if (params.id == null) return new Response("Not found", { status: 404 });
   const db = locals.runtime.env.DB;
   const row = await db
     .prepare("SELECT raw_xml, report_id FROM dmarc_reports WHERE report_id = ?")
@@ -14,7 +15,7 @@ export const GET: APIRoute = async ({ params, locals }) => {
   return new Response(row.raw_xml, {
     headers: {
       "Content-Type": "application/xml",
-      "Content-Disposition": `attachment; filename="${row.report_id}.xml"`,
+      "Content-Disposition": `attachment; filename="${row.report_id.replace(/[^\w\-.]/g, "_")}.xml"`,
     },
   });
 };

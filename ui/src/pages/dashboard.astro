@@ -1,8 +1,87 @@
 ---
 import Layout from "../components/Layout.astro";
+import { getDashboardStats, getRecentDmarcReports, formatDate } from "../lib/db";
+
+const db = Astro.locals.runtime.env.DB;
+const [stats, recent] = await Promise.all([
+  getDashboardStats(db),
+  getRecentDmarcReports(db, 10),
+]);
 ---
 
 <Layout title="Dashboard">
-  <h1 class="text-2xl font-bold">Dashboard</h1>
-  <p class="text-base-content/60">Coming soon.</p>
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold">Overview</h1>
+    <p class="text-base-content/60 text-sm mt-1">DMARC & TLS-RPT report summary</p>
+  </div>
+
+  <!-- Stat cards -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <div class="stat bg-base-200 rounded-box">
+      <div class="stat-title">DMARC Reports</div>
+      <div class="stat-value text-primary">{stats.dmarcThisMonth}</div>
+      <div class="stat-desc">this month</div>
+    </div>
+    <div class="stat bg-base-200 rounded-box">
+      <div class="stat-title">TLS Reports</div>
+      <div class="stat-value text-secondary">{stats.tlsThisMonth}</div>
+      <div class="stat-desc">this month</div>
+    </div>
+    <div class="stat bg-base-200 rounded-box">
+      <div class="stat-title">DKIM Pass Rate</div>
+      <div class="stat-value text-success">{stats.dkimPassRate}%</div>
+      <div class="stat-desc">all time</div>
+    </div>
+    <div class="stat bg-base-200 rounded-box">
+      <div class="stat-title">SPF Pass Rate</div>
+      <div class="stat-value text-success">{stats.spfPassRate}%</div>
+      <div class="stat-desc">all time</div>
+    </div>
+  </div>
+
+  <!-- Recent activity -->
+  <div class="card bg-base-200">
+    <div class="card-body p-0">
+      <div class="flex items-center justify-between px-6 py-4 border-b border-base-300">
+        <h2 class="font-semibold">Recent DMARC Reports</h2>
+        <a href="/dmarc-reports" class="btn btn-sm btn-ghost">View all →</a>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="table table-zebra">
+          <thead>
+            <tr>
+              <th>Domain</th>
+              <th>Org</th>
+              <th>Date</th>
+              <th>Policy</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {recent.map((r) => (
+              <tr>
+                <td class="font-mono text-sm">{r.domain}</td>
+                <td class="text-base-content/70">{r.org_name}</td>
+                <td class="text-base-content/70">{formatDate(r.begin_date)}</td>
+                <td>
+                  <span class:list={[
+                    "badge badge-sm",
+                    r.policy_p === "reject" ? "badge-error" :
+                    r.policy_p === "quarantine" ? "badge-warning" : "badge-ghost",
+                  ]}>
+                    {r.policy_p}
+                  </span>
+                </td>
+                <td>
+                  <a href={`/dmarc-reports/${r.report_id}`} class="btn btn-xs btn-ghost">
+                    View →
+                  </a>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 </Layout>

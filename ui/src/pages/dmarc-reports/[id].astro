@@ -1,0 +1,152 @@
+---
+import Layout from "../../components/Layout.astro";
+import { getDmarcReport, getDmarcRecords, formatDate } from "../../lib/db";
+
+const db = Astro.locals.runtime.env.DB;
+const { id } = Astro.params;
+
+if (!id) return Astro.redirect("/dmarc-reports");
+
+// Fetch report metadata first — streams the header
+const report = await getDmarcReport(db, id);
+if (!report) return Astro.redirect("/dmarc-reports");
+
+// Records fetched after — deferred below the fold
+const recordsPromise = getDmarcRecords(db, id);
+---
+
+<Layout title={`Report ${report.report_id.slice(0, 12)}`}>
+  <!-- Back link -->
+  <a href="/dmarc-reports" class="btn btn-sm btn-ghost mb-4"><span aria-hidden="true">←</span> Back to Reports</a>
+
+  <!-- Report metadata header — rendered immediately -->
+  <div class="card bg-base-200 mb-6">
+    <div class="card-body">
+      <div class="flex items-start justify-between">
+        <div>
+          <h1 class="text-xl font-bold">{report.domain}</h1>
+          <p class="text-base-content/60 text-sm font-mono">{report.report_id}</p>
+        </div>
+        <span class:list={[
+          "badge",
+          report.policy_p === "reject" ? "badge-error" :
+          report.policy_p === "quarantine" ? "badge-warning" : "badge-ghost",
+        ]}>
+          {report.policy_p}
+        </span>
+      </div>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4 text-sm">
+        <div>
+          <span class="text-base-content/50">Org</span>
+          <p>{report.org_name}</p>
+        </div>
+        <div>
+          <span class="text-base-content/50">Date</span>
+          <p>{formatDate(report.begin_date)}</p>
+        </div>
+        <div>
+          <span class="text-base-content/50">DKIM alignment</span>
+          <p class="uppercase">{report.adkim}</p>
+        </div>
+        <div>
+          <span class="text-base-content/50">SPF alignment</span>
+          <p class="uppercase">{report.aspf}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Records table — awaited here, streams when ready -->
+  {async () => {
+    const records = await recordsPromise;
+
+    const total = records.reduce((s, r) => s + r.count, 0);
+    const dkimPass = records.filter((r) => r.dkim_result === "pass").reduce((s, r) => s + r.count, 0);
+    const spfPass = records.filter((r) => r.spf_result === "pass").reduce((s, r) => s + r.count, 0);
+    const dkimPct = total > 0 ? Math.round((dkimPass / total) * 100) : 0;
+    const spfPct = total > 0 ? Math.round((spfPass / total) * 100) : 0;
+
+    return (
+      <>
+        <!-- Stat cards -->
+        <div class="grid grid-cols-3 gap-4 mb-6">
+          <div class="stat bg-base-200 rounded-box">
+            <div class="stat-title">Total Messages</div>
+            <div class="stat-value">{total}</div>
+            <div class="stat-desc">{records.length} source IPs</div>
+          </div>
+          <div class="stat bg-base-200 rounded-box">
+            <div class="stat-title">DKIM Pass</div>
+            <div class:list={["stat-value", dkimPct === 100 ? "text-success" : "text-warning"]}>
+              {dkimPct}%
+            </div>
+            <div class="stat-desc">{dkimPass} / {total}</div>
+          </div>
+          <div class="stat bg-base-200 rounded-box">
+            <div class="stat-title">SPF Pass</div>
+            <div class:list={["stat-value", spfPct === 100 ? "text-success" : "text-warning"]}>
+              {spfPct}%
+            </div>
+            <div class="stat-desc">{spfPass} / {total}</div>
+          </div>
+        </div>
+
+        <!-- Per-record table -->
+        <div class="card bg-base-200">
+          <div class="flex items-center justify-between px-6 py-4 border-b border-base-300">
+            <h2 class="font-semibold">Per-Record Breakdown</h2>
+            {report.raw_xml && (
+              <a
+                href={`/dmarc-reports/${report.report_id}/raw`}
+                class="btn btn-sm btn-ghost"
+                download={`${report.report_id}.xml`}
+              >
+                Download XML
+              </a>
+            )}
+          </div>
+          <div class="overflow-x-auto">
+            <table class="table table-zebra table-sm">
+              <thead>
+                <tr>
+                  <th>Source IP</th>
+                  <th>Count</th>
+                  <th>DKIM</th>
+                  <th>SPF</th>
+                  <th>Disposition</th>
+                  <th>Header From</th>
+                </tr>
+              </thead>
+              <tbody>
+                {records.map((r) => (
+                  <tr>
+                    <td class="font-mono text-sm">{r.source_ip}</td>
+                    <td>{r.count}</td>
+                    <td>
+                      <span class:list={[
+                        "badge badge-sm",
+                        r.dkim_result === "pass" ? "badge-success" : "badge-error",
+                      ]}>
+                        {r.dkim_result ?? "—"}
+                      </span>
+                    </td>
+                    <td>
+                      <span class:list={[
+                        "badge badge-sm",
+                        r.spf_result === "pass" ? "badge-success" : "badge-error",
+                      ]}>
+                        {r.spf_result ?? "—"}
+                      </span>
+                    </td>
+                    <td class="text-base-content/70">{r.disposition ?? "—"}</td>
+                    <td class="font-mono text-sm text-base-content/70">{r.header_from ?? "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </>
+    );
+  }}
+</Layout>

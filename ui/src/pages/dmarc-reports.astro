@@ -1,0 +1,116 @@
+---
+import Layout from "../components/Layout.astro";
+import { getDmarcReports, formatDate, totalPages } from "../lib/db";
+
+const db = Astro.locals.runtime.env.DB;
+const url = Astro.url;
+
+const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10));
+const domain = url.searchParams.get("domain") ?? undefined;
+const fromParam = url.searchParams.get("from");
+const toParam = url.searchParams.get("to");
+const from = fromParam ? Math.floor(new Date(fromParam).getTime() / 1000) : undefined;
+const to = toParam ? Math.floor(new Date(toParam).getTime() / 1000) : undefined;
+
+const { rows, total, pageSize } = await getDmarcReports(db, page, domain, from, to);
+const pages = totalPages(total, pageSize);
+
+function pageUrl(p: number) {
+  const params = new URLSearchParams(url.searchParams);
+  params.set("page", String(p));
+  return `/dmarc-reports?${params}`;
+}
+---
+
+<Layout title="DMARC Reports">
+  <div class="mb-6 flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-bold">DMARC Reports</h1>
+      <p class="text-base-content/60 text-sm mt-1">{total} reports total</p>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <form method="get" class="flex gap-3 mb-6 flex-wrap">
+    <input
+      type="text"
+      name="domain"
+      value={domain ?? ""}
+      placeholder="Filter by domain…"
+      class="input input-bordered input-sm w-48"
+    />
+    <input type="date" name="from" value={fromParam ?? ""} class="input input-bordered input-sm" />
+    <input type="date" name="to" value={toParam ?? ""} class="input input-bordered input-sm" />
+    <button type="submit" class="btn btn-sm btn-primary">Filter</button>
+    <a href="/dmarc-reports" class="btn btn-sm btn-ghost">Clear</a>
+  </form>
+
+  <!-- Table -->
+  <div class="card bg-base-200">
+    <div class="overflow-x-auto">
+      <table class="table table-zebra">
+        <thead>
+          <tr>
+            <th>Report ID</th>
+            <th>Domain</th>
+            <th>Org</th>
+            <th>Begin Date</th>
+            <th>Policy</th>
+            <th class="sr-only">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr>
+              <td class="font-mono text-xs text-base-content/60 max-w-32 truncate" title={r.report_id}>
+                {r.report_id.slice(0, 12)}…
+              </td>
+              <td class="font-mono text-sm">{r.domain}</td>
+              <td class="text-base-content/70">{r.org_name}</td>
+              <td class="text-base-content/70">{formatDate(r.begin_date)}</td>
+              <td>
+                <span class:list={[
+                  "badge badge-sm",
+                  r.policy_p === "reject" ? "badge-error" :
+                  r.policy_p === "quarantine" ? "badge-warning" : "badge-ghost",
+                ]}>
+                  {r.policy_p}
+                </span>
+              </td>
+              <td>
+                <a href={`/dmarc-reports/${r.report_id}`} class="btn btn-xs btn-ghost">
+                  View <span aria-hidden="true">→</span>
+                </a>
+              </td>
+            </tr>
+          ))}
+          {rows.length === 0 && (
+            <tr>
+              <td colspan={6} class="text-center text-base-content/40 py-8">No reports found.</td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  {pages > 1 && (
+    <div class="flex justify-center mt-6 gap-1">
+      {page > 1 && (
+        <a href={pageUrl(page - 1)} class="btn btn-sm btn-ghost"><span aria-hidden="true">←</span> Prev</a>
+      )}
+      {Array.from({ length: pages }, (_, i) => i + 1).map((p) => (
+        <a
+          href={pageUrl(p)}
+          class:list={["btn btn-sm", p === page ? "btn-primary" : "btn-ghost"]}
+        >
+          {p}
+        </a>
+      ))}
+      {page < pages && (
+        <a href={pageUrl(page + 1)} class="btn btn-sm btn-ghost">Next <span aria-hidden="true">→</span></a>
+      )}
+    </div>
+  )}
+</Layout>

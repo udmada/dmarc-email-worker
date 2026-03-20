@@ -44,7 +44,7 @@ const [stats, recent] = await Promise.all([
     <div class="card-body p-0">
       <div class="flex items-center justify-between px-6 py-4 border-b border-base-300">
         <h2 class="font-semibold">Recent DMARC Reports</h2>
-        <a href="/dmarc-reports" class="btn btn-sm btn-ghost">View all →</a>
+        <a href="/dmarc-reports" class="btn btn-sm btn-ghost">View all <span aria-hidden="true">→</span></a>
       </div>
       <div class="overflow-x-auto">
         <table class="table table-zebra">
@@ -54,31 +54,37 @@ const [stats, recent] = await Promise.all([
               <th>Org</th>
               <th>Date</th>
               <th>Policy</th>
-              <th></th>
+              <th class="sr-only">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {recent.map((r) => (
+            {recent.length === 0 ? (
               <tr>
-                <td class="font-mono text-sm">{r.domain}</td>
-                <td class="text-base-content/70">{r.org_name}</td>
-                <td class="text-base-content/70">{formatDate(r.begin_date)}</td>
-                <td>
-                  <span class:list={[
-                    "badge badge-sm",
-                    r.policy_p === "reject" ? "badge-error" :
-                    r.policy_p === "quarantine" ? "badge-warning" : "badge-ghost",
-                  ]}>
-                    {r.policy_p}
-                  </span>
-                </td>
-                <td>
-                  <a href={`/dmarc-reports/${r.report_id}`} class="btn btn-xs btn-ghost">
-                    View →
-                  </a>
-                </td>
+                <td colspan="5" class="text-center text-base-content/50 py-8">No reports yet.</td>
               </tr>
-            ))}
+            ) : (
+              recent.map((r) => (
+                <tr>
+                  <td class="font-mono text-sm">{r.domain}</td>
+                  <td class="text-base-content/70">{r.org_name}</td>
+                  <td class="text-base-content/70">{formatDate(r.begin_date)}</td>
+                  <td>
+                    <span class:list={[
+                      "badge badge-sm",
+                      r.policy_p === "reject" ? "badge-error" :
+                      r.policy_p === "quarantine" ? "badge-warning" : "badge-ghost",
+                    ]}>
+                      {r.policy_p}
+                    </span>
+                  </td>
+                  <td>
+                    <a href={`/dmarc-reports/${r.report_id}`} class="btn btn-xs btn-ghost">
+                      View <span aria-hidden="true">→</span>
+                    </a>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>

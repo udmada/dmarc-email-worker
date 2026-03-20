@@ -1,6 +1,7 @@
 {
   "extends": "astro/tsconfigs/strict",
   "compilerOptions": {
+    // 2023-07-01 is the newest available sub-path in @cloudflare/workers-types v4
     "types": ["@cloudflare/workers-types/2023-07-01"]
   }
 }

@@ -1,8 +1,8 @@
 ---
-import { Badge, Surface, Table } from "@cloudflare/kumo";
+import { Surface } from "@cloudflare/kumo";
 import { env } from "cloudflare:workers";
 import Layout from "../../components/Layout.astro";
-import { formatDate, getDmarcRecords, getDmarcReport } from "../../lib/db";
+import { getDmarcRecords, getDmarcReport } from "../../lib/db";
 
 const db = env.DB;
 const { id } = Astro.params;
@@ -12,146 +12,204 @@ if (id == null) return Astro.redirect("/dmarc-reports");
 const report = await getDmarcReport(db, id);
 if (!report) return Astro.redirect("/dmarc-reports");
 
-const recordsPromise = getDmarcRecords(db, id);
+const records = await getDmarcRecords(db, id);
+
+// Header stats
+const total = records.reduce((s, r) => s + r.count, 0);
+const accepted = records.filter((r) => (r.disposition ?? "none") === "none").reduce((s, r) => s + r.count, 0);
+const quarantined = records.filter((r) => r.disposition === "quarantine").reduce((s, r) => s + r.count, 0);
+const rejected = records.filter((r) => r.disposition === "reject").reduce((s, r) => s + r.count, 0);
+const pct = (n: number): string => (total > 0 ? `${Math.round((n / total) * 100)}%` : "0%");
+
+// Date formatting for header banner
+const beginDate = new Date(report.begin_date * 1000);
+const weekday = beginDate.toLocaleDateString("en-NZ", { weekday: "long" });
+const fullDate = beginDate.toLocaleDateString("en-NZ", { year: "numeric", month: "long", day: "numeric" });
+
+// Group records by envelope_from domain (fallback to header_from, then source_ip)
+interface SenderGroup {
+  key: string;
+  records: typeof records;
+  total: number;
+  dkimPass: boolean;
+  spfPass: boolean;
+  disposition: string;
+  sourceIps: string[];
+}
+
+const groupMap = new Map<string, typeof records>();
+for (const r of records) {
+  const key = r.envelope_from ?? r.header_from ?? r.source_ip;
+  const existing = groupMap.get(key) ?? [];
+  existing.push(r);
+  groupMap.set(key, existing);
+}
+
+const senderGroups: SenderGroup[] = Array.from(groupMap.entries()).map(([key, recs]) => ({
+  key,
+  records: recs,
+  total: recs.reduce((s, r) => s + r.count, 0),
+  dkimPass: recs.some((r) => r.dkim_result === "pass"),
+  spfPass: recs.some((r) => r.spf_result === "pass"),
+  disposition: recs[0]?.disposition ?? "none",
+  sourceIps: [...new Set(recs.map((r) => r.source_ip))],
+}));
+
+function dmarcResultLabel(dkimPass: boolean, spfPass: boolean): string {
+  if (dkimPass) return "DKIM Aligned";
+  if (spfPass) return "SPF Aligned";
+  return "Failed";
+}
+
+function dmarcResultPassed(dkimPass: boolean, spfPass: boolean): boolean {
+  return dkimPass || spfPass;
+}
+
+function faviconUrl(domain: string): string {
+  const d = domain.replace(/^[^@]+@/, "").split("/")[0];
+  return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(d)}&sz=16`;
+}
 ---
 
-<Layout title={`Report ${report.report_id.slice(0, 12)}`}>
+<Layout title={`Report — ${report.domain}`}>
   <a href="/dmarc-reports" class="inline-flex items-center gap-1 text-sm text-kumo-subtle hover:text-kumo-default transition-colors mb-4">
     <span aria-hidden="true">←</span> Back to Reports
   </a>
 
-  <!-- Metadata card -->
-  <Surface className="mb-6">
-    <div class="p-6">
-      <div class="flex items-start justify-between">
-        <div>
-          <h1 class="text-xl font-semibold text-kumo-default">{report.domain}</h1>
-          <p class="text-xs font-mono text-kumo-subtle mt-0.5">{report.report_id}</p>
-        </div>
-        <Badge
-          variant={
-            report.policy_p === "reject"
-              ? "destructive"
-              : report.policy_p === "quarantine"
-                ? "outline"
-                : "secondary"
-          }
-        >
-          {report.policy_p}
-        </Badge>
-      </div>
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4 text-sm">
-        <div>
-          <span class="text-xs text-kumo-inactive uppercase tracking-wide">Org</span>
-          <p class="text-kumo-default mt-0.5">{report.org_name}</p>
-        </div>
-        <div>
-          <span class="text-xs text-kumo-inactive uppercase tracking-wide">Date</span>
-          <p class="text-kumo-default mt-0.5">{formatDate(report.begin_date)}</p>
-        </div>
-        <div>
-          <span class="text-xs text-kumo-inactive uppercase tracking-wide">DKIM Alignment</span>
-          <p class="text-kumo-default uppercase mt-0.5">{report.adkim}</p>
-        </div>
-        <div>
-          <span class="text-xs text-kumo-inactive uppercase tracking-wide">SPF Alignment</span>
-          <p class="text-kumo-default uppercase mt-0.5">{report.aspf}</p>
-        </div>
-      </div>
+  <!-- Banner header -->
+  <div class="rounded-xl bg-kumo-brand text-white p-6 mb-6 flex flex-col sm:flex-row gap-6 justify-between">
+    <div>
+      <div class="text-2xl font-bold">{weekday}</div>
+      <div class="text-sm opacity-80 mt-0.5">{fullDate}</div>
     </div>
+    <div class="grid grid-cols-2 gap-x-12 gap-y-1 text-sm my-auto">
+      <span>Domain: <strong>{report.domain}</strong></span>
+      <span>Accepted: <strong>{accepted} ({pct(accepted)})</strong></span>
+      <span>Number of reports: <strong>1</strong></span>
+      <span>Quarantined: <strong>{quarantined} ({pct(quarantined)})</strong></span>
+      <span>Total emails: <strong>{total}</strong></span>
+      <span>Rejected: <strong>{rejected} ({pct(rejected)})</strong></span>
+    </div>
+  </div>
+
+  <!-- Sender table -->
+  <Surface className="mb-6 overflow-hidden">
+    <!-- Column headers -->
+    <div class="grid grid-cols-[1fr_5rem_13rem_10rem_4rem] border-b border-kumo-line px-4 py-3 text-sm font-medium text-kumo-subtle">
+      <span>Sender</span>
+      <span>Volume</span>
+      <span>DMARC Result</span>
+      <span>Disposition</span>
+      <span>Details</span>
+    </div>
+
+    {records.length === 0 ? (
+      <p class="px-4 py-8 text-sm text-kumo-inactive text-center">No records for this report.</p>
+    ) : (
+      senderGroups.map((g) => (
+        <details class="group border-b border-kumo-line last:border-b-0">
+          <summary class="grid grid-cols-[1fr_5rem_13rem_10rem_4rem] items-center px-4 py-3 cursor-pointer list-none hover:bg-kumo-tint transition-colors">
+            <div class="flex items-center gap-2 min-w-0">
+              <img
+                src={faviconUrl(g.key)}
+                width="16"
+                height="16"
+                class="shrink-0 rounded-sm"
+                alt=""
+                aria-hidden="true"
+              />
+              <div class="min-w-0">
+                <div class="text-sm font-medium text-kumo-default truncate">{g.key}</div>
+                <div class="text-xs text-kumo-subtle">
+                  from {g.sourceIps.length} host{g.sourceIps.length !== 1 ? "s" : ""}
+                </div>
+              </div>
+            </div>
+            <span class="text-sm font-semibold text-kumo-default">{g.total}</span>
+            <span class={`text-sm flex items-center gap-1 ${dmarcResultPassed(g.dkimPass, g.spfPass) ? "text-kumo-success" : "text-kumo-danger"}`}>
+              <span aria-hidden="true">{dmarcResultPassed(g.dkimPass, g.spfPass) ? "✓" : "✗"}</span>
+              {dmarcResultLabel(g.dkimPass, g.spfPass)}
+            </span>
+            <span class={`text-sm flex items-center gap-1 ${g.disposition === "none" ? "text-kumo-success" : "text-kumo-danger"}`}>
+              <span aria-hidden="true">{g.disposition === "none" ? "✓" : "✗"}</span>
+              <span class="capitalize">{g.disposition ?? "none"}</span>
+            </span>
+            <span class="text-kumo-subtle text-sm transition-transform duration-200 group-open:rotate-180 inline-block">▾</span>
+          </summary>
+
+          <!-- Expanded: per-source-IP sub-table -->
+          <div class="bg-kumo-recessed border-t border-kumo-line">
+            <div class="grid grid-cols-[1fr_5rem_9rem_10rem_9rem_8rem] px-6 py-2 text-xs font-medium text-kumo-subtle border-b border-kumo-line">
+              <span>Reported by</span>
+              <span>Volume</span>
+              <span>Sender (SPF)</span>
+              <span>Signature (DKIM)</span>
+              <span>DMARC result</span>
+              <span>Disposition</span>
+            </div>
+            {g.records.map((r) => {
+              const passed = r.dkim_result === "pass" || r.spf_result === "pass";
+              return (
+                <div class="grid grid-cols-[1fr_5rem_9rem_10rem_9rem_8rem] items-center px-6 py-2.5 text-sm border-b border-kumo-line last:border-b-0">
+                  <div class="flex items-center gap-2">
+                    <img src={faviconUrl(report.org_name)} width="14" height="14" alt="" aria-hidden="true" class="rounded-sm" />
+                    <span class="text-kumo-subtle font-mono text-xs">{r.source_ip}</span>
+                  </div>
+                  <span class="text-kumo-default">{r.count}</span>
+                  <span class={r.spf_result === "pass" ? "text-kumo-success flex items-center gap-1" : "text-kumo-danger flex items-center gap-1"}>
+                    <span aria-hidden="true">{r.spf_result === "pass" ? "✓" : "✗"}</span>
+                    <span class="capitalize">{r.spf_result === "pass" ? "Aligned" : (r.spf_result ?? "—")}</span>
+                  </span>
+                  <span class={r.dkim_result === "pass" ? "text-kumo-success flex items-center gap-1" : "text-kumo-danger flex items-center gap-1"}>
+                    <span aria-hidden="true">{r.dkim_result === "pass" ? "✓" : "✗"}</span>
+                    <span class="capitalize">{r.dkim_result === "pass" ? "Aligned" : (r.dkim_result ?? "—")}</span>
+                  </span>
+                  <span class={`flex items-center gap-1 ${passed ? "text-kumo-success" : "text-kumo-danger"}`}>
+                    <span aria-hidden="true">{passed ? "✓" : "✗"}</span>
+                    {passed ? "Pass" : "Fail"}
+                  </span>
+                  <span class={`flex items-center gap-1 capitalize ${(r.disposition ?? "none") === "none" ? "text-kumo-success" : "text-kumo-danger"}`}>
+                    <span aria-hidden="true">{(r.disposition ?? "none") === "none" ? "✓" : "✗"}</span>
+                    {r.disposition ?? "none"}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </details>
+      ))
+    )}
   </Surface>
 
-  <!-- Records section — streamed -->
-  {async () => {
-    const records = await recordsPromise;
-
-    if (records.length === 0) {
-      return (
-        <Surface className="p-6 text-kumo-subtle text-sm">
-          No records found for this report.
-        </Surface>
-      );
-    }
-
-    const total = records.reduce((s, r) => s + r.count, 0);
-    const dkimPass = records.filter((r) => r.dkim_result === "pass").reduce((s, r) => s + r.count, 0);
-    const spfPass = records.filter((r) => r.spf_result === "pass").reduce((s, r) => s + r.count, 0);
-    const dkimPct = total > 0 ? Math.round((dkimPass / total) * 100) : 0;
-    const spfPct = total > 0 ? Math.round((spfPass / total) * 100) : 0;
-
-    return (
-      <>
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-          <Surface className="p-5">
-            <p class="text-xs text-kumo-subtle uppercase tracking-wide">Total Messages</p>
-            <p class="text-3xl font-bold text-kumo-default mt-1">{total}</p>
-            <p class="text-xs text-kumo-inactive mt-1">{records.length} source IPs</p>
-          </Surface>
-          <Surface className="p-5">
-            <p class="text-xs text-kumo-subtle uppercase tracking-wide">DKIM Pass</p>
-            <p class={`text-3xl font-bold mt-1 ${dkimPct === 100 ? "text-kumo-success" : "text-kumo-warning"}`}>
-              {dkimPct}%
-            </p>
-            <p class="text-xs text-kumo-inactive mt-1">{dkimPass} / {total}</p>
-          </Surface>
-          <Surface className="p-5">
-            <p class="text-xs text-kumo-subtle uppercase tracking-wide">SPF Pass</p>
-            <p class={`text-3xl font-bold mt-1 ${spfPct === 100 ? "text-kumo-success" : "text-kumo-warning"}`}>
-              {spfPct}%
-            </p>
-            <p class="text-xs text-kumo-inactive mt-1">{spfPass} / {total}</p>
-          </Surface>
-        </div>
-
-        <Surface>
-          <div class="flex items-center justify-between px-6 py-4 border-b border-kumo-line">
-            <h2 class="font-semibold text-kumo-default">Per-Record Breakdown</h2>
-            {report.raw_xml && (
-              <a
-                href={`/dmarc-reports/${id}/raw`}
-                class="text-sm text-kumo-link hover:text-kumo-link/70 transition-colors"
-                download={`${id}.xml`}
-              >
-                Download XML
-              </a>
-            )}
-          </div>
-          <div class="overflow-x-auto">
-            <Table>
-              <Table.Header>
-                <Table.Row>
-                  <Table.Head>Source IP</Table.Head>
-                  <Table.Head>Count</Table.Head>
-                  <Table.Head>DKIM</Table.Head>
-                  <Table.Head>SPF</Table.Head>
-                  <Table.Head>Disposition</Table.Head>
-                  <Table.Head>Header From</Table.Head>
-                </Table.Row>
-              </Table.Header>
-              <Table.Body>
-                {records.map((r) => (
-                  <Table.Row key={r.id}>
-                    <Table.Cell className="font-mono text-sm">{r.source_ip}</Table.Cell>
-                    <Table.Cell>{r.count}</Table.Cell>
-                    <Table.Cell>
-                      <Badge variant={r.dkim_result === "pass" ? "success" : "destructive"}>
-                        {r.dkim_result ?? "—"}
-                      </Badge>
-                    </Table.Cell>
-                    <Table.Cell>
-                      <Badge variant={r.spf_result === "pass" ? "success" : "destructive"}>
-                        {r.spf_result ?? "—"}
-                      </Badge>
-                    </Table.Cell>
-                    <Table.Cell className="text-kumo-subtle">{r.disposition ?? "—"}</Table.Cell>
-                    <Table.Cell className="font-mono text-sm text-kumo-subtle">{r.header_from ?? "—"}</Table.Cell>
-                  </Table.Row>
-                ))}
-              </Table.Body>
-            </Table>
-          </div>
-        </Surface>
-      </>
-    );
-  }}
+  <!-- Report details -->
+  <Surface className="p-6">
+    <h2 class="font-semibold text-kumo-default mb-4">Report details</h2>
+    <dl class="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
+      <dt class="text-kumo-subtle">Report ID</dt>
+      <dd class="font-mono text-kumo-default flex items-center gap-3">
+        {report.report_id}
+        {report.raw_xml && (
+          <a
+            href={`/dmarc-reports/${id}/raw`}
+            class="text-kumo-link hover:text-kumo-link/70 transition-colors"
+            download={`${id}.xml`}
+          >
+            Download XML
+          </a>
+        )}
+      </dd>
+      <dt class="text-kumo-subtle">Reported by</dt>
+      <dd class="text-kumo-default">{report.org_name}</dd>
+      <dt class="text-kumo-subtle">Period begin</dt>
+      <dd class="text-kumo-default">{new Date(report.begin_date * 1000).toUTCString()}</dd>
+      <dt class="text-kumo-subtle">Period end</dt>
+      <dd class="text-kumo-default">{new Date(report.end_date * 1000).toUTCString()}</dd>
+      <dt class="text-kumo-subtle">Policy</dt>
+      <dd class="text-kumo-default capitalize">{report.policy_p}{report.policy_pct != null && report.policy_pct !== 100 ? ` (${report.policy_pct}%)` : ""}</dd>
+      <dt class="text-kumo-subtle">DKIM alignment</dt>
+      <dd class="text-kumo-default uppercase">{report.adkim}</dd>
+      <dt class="text-kumo-subtle">SPF alignment</dt>
+      <dd class="text-kumo-default uppercase">{report.aspf}</dd>
+    </dl>
+  </Surface>
 </Layout>

@@ -10,7 +10,7 @@
     "test": "pnpm exec oxfmt --check && pnpm exec oxlint --type-aware"
   },
   "dependencies": {
-    "fast-xml-parser": "^5.5.6",
+    "fast-xml-parser": "^5.5.7",
     "fflate": "^0.8.2",
     "mime-db": "^1.54.0",
     "mimetext": "^3.0.28",

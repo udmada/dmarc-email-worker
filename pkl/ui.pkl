@@ -16,5 +16,5 @@ d1_databases: Listing<Dynamic> = new {
 }
 
 assets: Dynamic = new {
-  directory = "./dist/client"
+  directory = "./dist"
 }

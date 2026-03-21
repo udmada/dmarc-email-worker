@@ -1,6 +1,6 @@
 # dmarc-email-worker
 
-A Cloudflare Worker that receives DMARC aggregate reports and TLS-RPT reports via email, validates and parses them, writes results to D1 and Analytics Engine, and optionally sends acknowledgment replies via a delayed queue.
+Two Cloudflare Workers: an email ingest worker that receives DMARC aggregate reports and TLS-RPT reports, parses them, and writes to D1; and a read-only Astro UI worker for browsing reports.
 
 ---
 
@@ -15,7 +15,7 @@ graph LR
     C --> E{Rate Limiter\n100 req/min/domain}
 
     E -- allowed --> F{Trust Check\n+ DMARC header}
-    F -- trusted --> G[Parse and Detect\nPostalMime + pako]
+    F -- trusted --> G[Parse and Detect\nPostalMime + fflate]
 
     G -- DMARC XML --> H[dmarc.ts]
     G -- TLS-RPT JSON --> I[tlsrpt.ts]
@@ -30,6 +30,11 @@ graph LR
     J -. optional .-> O[Hyperdrive]
     N -. optional .-> O
     O --> P[(PostgreSQL)]
+
+    U[Browser] --> CF[Cloudflare Access\nAuthentik OIDC]
+    CF --> V[Astro UI Worker\nui/]
+    V -- read-only --> J
+    V -- read-only --> N
 ```
 
 ## Email flow

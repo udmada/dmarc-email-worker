@@ -1,0 +1,103 @@
+---
+import Layout from "../../components/Layout.astro";
+import { getTlsReport, formatDate } from "../../lib/db";
+
+const db = Astro.locals.runtime.env.DB;
+const { id } = Astro.params;
+
+if (id == null) return Astro.redirect("/tls-reports");
+
+const numericId = parseInt(id, 10);
+if (isNaN(numericId)) return Astro.redirect("/tls-reports");
+
+const report = await getTlsReport(db, numericId);
+if (!report) return Astro.redirect("/tls-reports");
+
+interface FailureDetail {
+  "result-type": string;
+  "sending-mta-ip": string;
+  "receiving-mx-hostname": string;
+  "failed-session-count": number;
+}
+const failures: FailureDetail[] = report.failure_details
+  ? (JSON.parse(report.failure_details) as FailureDetail[])
+  : [];
+---
+
+<Layout title={`TLS Report — ${report.policy_domain}`}>
+  <a href="/tls-reports" class="btn btn-sm btn-ghost mb-4">
+    <span aria-hidden="true">←</span> Back to TLS Reports
+  </a>
+
+  <!-- Metadata header -->
+  <div class="card bg-base-200 mb-6">
+    <div class="card-body">
+      <div class="flex items-start justify-between">
+        <div>
+          <h1 class="text-xl font-bold">{report.policy_domain}</h1>
+          <p class="text-base-content/60 text-sm">{report.org_name}</p>
+        </div>
+        <span class="badge badge-ghost">{report.policy_type}</span>
+      </div>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4 text-sm">
+        <div>
+          <span class="text-base-content/50">Date</span>
+          <p>{formatDate(report.begin_date)}</p>
+        </div>
+        <div>
+          <span class="text-base-content/50">Successful Sessions</span>
+          <p class="text-success font-semibold">{report.total_success}</p>
+        </div>
+        <div>
+          <span class="text-base-content/50">Failed Sessions</span>
+          <p class:list={[report.total_failures > 0 ? "text-error" : "text-success", "font-semibold"]}>
+            {report.total_failures}
+          </p>
+        </div>
+        <div>
+          <span class="text-base-content/50">Report ID</span>
+          <p class="font-mono text-xs truncate">{report.report_id}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Failure details -->
+  {failures.length > 0 ? (
+    <div class="card bg-base-200">
+      <div class="px-6 py-4 border-b border-base-300">
+        <h2 class="font-semibold">Failure Details</h2>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="table table-zebra table-sm">
+          <thead>
+            <tr>
+              <th>Result Type</th>
+              <th>Sending MTA IP</th>
+              <th>Receiving MX</th>
+              <th>Failed Sessions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {failures.map((f) => (
+              <tr>
+                <td>
+                  <span class="badge badge-sm badge-error">{f["result-type"]}</span>
+                </td>
+                <td class="font-mono text-sm">{f["sending-mta-ip"]}</td>
+                <td class="font-mono text-sm text-base-content/70">{f["receiving-mx-hostname"]}</td>
+                <td class="font-semibold text-error">{f["failed-session-count"]}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  ) : (
+    <div class="card bg-base-200">
+      <div class="card-body text-center text-base-content/40">
+        No failure details recorded for this report.
+      </div>
+    </div>
+  )}
+</Layout>

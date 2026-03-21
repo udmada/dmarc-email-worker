@@ -67,7 +67,7 @@ sequenceDiagram
         W-->>ER: silent drop
     end
 
-    W->>W: PostalMime.parse() + pako.ungzip()
+    W->>W: PostalMime.parse() + fflate.decompress()
     W->>W: detectAndDecompress() — XML vs JSON
 
     alt DMARC XML
@@ -210,13 +210,31 @@ wrangler dev
 Source layout:
 
 ```
-src/
+src/                          — Email ingest worker
   index.ts     — worker entry: email(), queue(), fetch() handlers
   dmarc.ts     — DMARC XML parser (fast-xml-parser)
   tlsrpt.ts    — TLS-RPT JSON parser (RFC 8460)
   storage.ts   — D1, Analytics Engine, and Hyperdrive writes
   reply.ts     — queue producer and email reply sender
   types.ts     — shared TypeScript interfaces
+
+ui/                           — Astro UI worker (read-only)
+  src/
+    pages/
+      dashboard.astro         — overview with stat cards and recent reports
+      dmarc-reports.astro     — paginated report list with filters
+      dmarc-reports/[id].astro — report detail: banner header, grouped sender rows
+      tls-reports.astro       — TLS-RPT report list
+      tls-reports/[id].astro  — TLS-RPT report detail
+    components/
+      Layout.astro            — shell with sidebar navigation
+      Sidebar.astro           — nav links
+    lib/
+      db.ts                   — D1 query helpers and row types
+    styles/
+      global.css              — Tailwind v4 + Kumo design tokens
 ```
+
+For UI design decisions and component patterns see [`docs/ui-design.md`](docs/ui-design.md).
 
 PRs welcome. Please keep changes focused — one concern per PR.

@@ -67,7 +67,7 @@ function dmarcResultPassed(dkimPass: boolean, spfPass: boolean): boolean {
 
 function faviconUrl(domain: string): string {
   const d = domain.replace(/^[^@]+@/, "").split("/")[0];
-  return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(d)}&sz=16`;
+  return `https://icons.duckduckgo.com/ip3/${encodeURIComponent(d)}.ico`;
 }
 ---
 

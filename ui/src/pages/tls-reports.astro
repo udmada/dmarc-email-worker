@@ -1,5 +1,5 @@
 ---
-import { Badge, Button, Surface, Table } from "@cloudflare/kumo";
+import { Badge, Surface, Table } from "@cloudflare/kumo";
 import { env } from "cloudflare:workers";
 import Layout from "../components/Layout.astro";
 import { formatDate, getTlsReports, totalPages } from "../lib/db";
@@ -34,7 +34,7 @@ function pageUrl(p: number): string {
       placeholder="Filter by policy domain…"
       class="h-8 px-3 text-sm rounded-md border border-kumo-line bg-kumo-base text-kumo-default placeholder:text-kumo-placeholder focus:outline-2 focus:outline-kumo-brand w-56"
     />
-    <Button type="submit" variant="primary" size="sm">Filter</Button>
+    <button type="submit" class="h-8 px-3 text-sm rounded-md bg-kumo-brand text-white font-medium hover:opacity-90 transition-opacity">Filter</button>
     <a href="/tls-reports" class="text-sm text-kumo-subtle hover:text-kumo-default transition-colors">Clear</a>
   </form>
 

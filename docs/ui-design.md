@@ -31,6 +31,8 @@ As a consequence, several Kumo components cannot be used and are replaced with n
 | `Pagination`   | Requires `setPage` state callback                       | Plain `<a>` links with URL query params   |
 | `Input`        | Controlled React component, breaks `method="get"` forms | Native `<input>` with Kumo token classes  |
 | `Button`       | Renders a disclosure marker when server-rendered        | Native `<button>` with Kumo token classes |
+| `Table.*`      | `Table.Body` renders empty — rows not output under SSR  | Native `<table><thead><tbody><tr><td>`    |
+| `Badge`        | Clips text content in table cells under SSR             | `<span>` with Kumo token color classes    |
 
 ### Kumo design tokens (Tailwind v4)
 

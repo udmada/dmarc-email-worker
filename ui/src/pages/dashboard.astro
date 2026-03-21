@@ -1,5 +1,5 @@
 ---
-import { Badge, Surface, Table } from "@cloudflare/kumo";
+import { Surface } from "@cloudflare/kumo";
 import { env } from "cloudflare:workers";
 import Layout from "../components/Layout.astro";
 import { formatDate, getDashboardStats, getRecentDmarcReports } from "../lib/db";
@@ -9,6 +9,12 @@ const [stats, recent] = await Promise.all([
   getDashboardStats(db),
   getRecentDmarcReports(db, 10),
 ]);
+
+function policyClass(p: string): string {
+  if (p === "reject") return "text-kumo-danger font-medium";
+  if (p === "quarantine") return "text-amber-600 font-medium";
+  return "text-kumo-subtle";
+}
 ---
 
 <Layout title="Dashboard">
@@ -50,53 +56,43 @@ const [stats, recent] = await Promise.all([
       </a>
     </div>
     <div class="overflow-x-auto">
-      <Table>
-        <Table.Header>
-          <Table.Row>
-            <Table.Head className="px-4 py-3">Domain</Table.Head>
-            <Table.Head className="px-4 py-3">Org</Table.Head>
-            <Table.Head className="px-4 py-3">Date</Table.Head>
-            <Table.Head className="px-4 py-3">Policy</Table.Head>
-            <Table.Head className="px-4 py-3 sr-only">Actions</Table.Head>
-          </Table.Row>
-        </Table.Header>
-        <Table.Body>
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="border-b border-kumo-line">
+            <th class="px-4 py-3 text-sm font-semibold text-kumo-default">Domain</th>
+            <th class="px-4 py-3 text-sm font-semibold text-kumo-default">Org</th>
+            <th class="px-4 py-3 text-sm font-semibold text-kumo-default">Date</th>
+            <th class="px-4 py-3 text-sm font-semibold text-kumo-default">Policy</th>
+            <th class="px-4 py-3 sr-only">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
           {recent.length === 0 ? (
             <tr>
               <td colspan="5" class="text-center py-8 text-kumo-inactive">No reports yet.</td>
             </tr>
           ) : (
             recent.map((r) => (
-              <Table.Row key={r.report_id}>
-                <Table.Cell className="px-4 py-3 font-mono text-sm">{r.domain}</Table.Cell>
-                <Table.Cell className="px-4 py-3 text-kumo-subtle">{r.org_name}</Table.Cell>
-                <Table.Cell className="px-4 py-3 text-kumo-subtle">{formatDate(r.begin_date)}</Table.Cell>
-                <Table.Cell className="px-4 py-3">
-                  <Badge
-                    variant={
-                      r.policy_p === "reject"
-                        ? "destructive"
-                        : r.policy_p === "quarantine"
-                          ? "outline"
-                          : "secondary"
-                    }
-                  >
-                    {r.policy_p}
-                  </Badge>
-                </Table.Cell>
-                <Table.Cell className="px-4 py-3">
+              <tr class="border-b border-kumo-line last:border-b-0 hover:bg-kumo-tint transition-colors">
+                <td class="px-4 py-3 font-mono text-sm text-kumo-default">{r.domain}</td>
+                <td class="px-4 py-3 text-sm text-kumo-subtle">{r.org_name}</td>
+                <td class="px-4 py-3 text-sm text-kumo-subtle">{formatDate(r.begin_date)}</td>
+                <td class="px-4 py-3 text-sm capitalize">
+                  <span class={policyClass(r.policy_p)}>{r.policy_p}</span>
+                </td>
+                <td class="px-4 py-3">
                   <a
                     href={`/dmarc-reports/${r.report_id}`}
                     class="text-sm text-kumo-link hover:text-kumo-link/70 transition-colors"
                   >
                     View <span aria-hidden="true">→</span>
                   </a>
-                </Table.Cell>
-              </Table.Row>
+                </td>
+              </tr>
             ))
           )}
-        </Table.Body>
-      </Table>
+        </tbody>
+      </table>
     </div>
   </Surface>
 </Layout>

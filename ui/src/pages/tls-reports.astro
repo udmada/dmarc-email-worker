@@ -1,5 +1,5 @@
 ---
-import { Badge, Surface, Table } from "@cloudflare/kumo";
+import { Surface } from "@cloudflare/kumo";
 import { env } from "cloudflare:workers";
 import Layout from "../components/Layout.astro";
 import { formatDate, getTlsReports, totalPages } from "../lib/db";
@@ -39,49 +39,47 @@ function pageUrl(p: number): string {
   </form>
 
   <Surface className="overflow-x-auto">
-    <Table>
-      <Table.Header>
-        <Table.Row>
-          <Table.Head className="px-4 py-3">Org</Table.Head>
-          <Table.Head className="px-4 py-3">Policy Domain</Table.Head>
-          <Table.Head className="px-4 py-3">Policy Type</Table.Head>
-          <Table.Head className="px-4 py-3">Date</Table.Head>
-          <Table.Head className="px-4 py-3">Failures</Table.Head>
-          <Table.Head className="px-4 py-3 sr-only">Actions</Table.Head>
-        </Table.Row>
-      </Table.Header>
-      <Table.Body>
+    <table class="w-full text-left border-collapse">
+      <thead>
+        <tr class="border-b border-kumo-line">
+          <th class="px-4 py-3 text-sm font-semibold text-kumo-default">Org</th>
+          <th class="px-4 py-3 text-sm font-semibold text-kumo-default">Policy Domain</th>
+          <th class="px-4 py-3 text-sm font-semibold text-kumo-default">Policy Type</th>
+          <th class="px-4 py-3 text-sm font-semibold text-kumo-default">Date</th>
+          <th class="px-4 py-3 text-sm font-semibold text-kumo-default">Failures</th>
+          <th class="px-4 py-3 sr-only">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
         {rows.length === 0 ? (
           <tr>
             <td colspan="6" class="text-center py-8 text-kumo-inactive">No TLS reports found.</td>
           </tr>
         ) : (
           rows.map((r) => (
-            <Table.Row key={r.id}>
-              <Table.Cell className="px-4 py-3 text-kumo-subtle">{r.org_name}</Table.Cell>
-              <Table.Cell className="px-4 py-3 font-mono text-sm">{r.policy_domain}</Table.Cell>
-              <Table.Cell className="px-4 py-3">
-                <Badge variant="secondary">{r.policy_type}</Badge>
-              </Table.Cell>
-              <Table.Cell className="px-4 py-3 text-kumo-subtle">{formatDate(r.begin_date)}</Table.Cell>
-              <Table.Cell className="px-4 py-3">
+            <tr class="border-b border-kumo-line last:border-b-0 hover:bg-kumo-tint transition-colors">
+              <td class="px-4 py-3 text-sm text-kumo-subtle">{r.org_name}</td>
+              <td class="px-4 py-3 font-mono text-sm text-kumo-default">{r.policy_domain}</td>
+              <td class="px-4 py-3 text-sm text-kumo-subtle capitalize">{r.policy_type}</td>
+              <td class="px-4 py-3 text-sm text-kumo-subtle">{formatDate(r.begin_date)}</td>
+              <td class="px-4 py-3 text-sm">
                 <span class={r.total_failures > 0 ? "font-semibold text-kumo-danger" : "font-semibold text-kumo-success"}>
                   {r.total_failures}
                 </span>
-              </Table.Cell>
-              <Table.Cell className="px-4 py-3">
+              </td>
+              <td class="px-4 py-3">
                 <a
                   href={`/tls-reports/${r.id}`}
                   class="text-sm text-kumo-link hover:text-kumo-link/70 transition-colors"
                 >
                   View <span aria-hidden="true">→</span>
                 </a>
-              </Table.Cell>
-            </Table.Row>
+              </td>
+            </tr>
           ))
         )}
-      </Table.Body>
-    </Table>
+      </tbody>
+    </table>
   </Surface>
 
   {pages > 1 && (

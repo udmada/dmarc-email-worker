@@ -24,10 +24,13 @@ The UI worker is a read-only Astro v6 application deployed as a second Cloudflar
 
 Kumo React components (`Surface`, `Table`, `Badge`, `Button`) are imported into `.astro` files without any `client:*` directive. This means they are rendered purely server-side — no React runtime is sent to the browser. The `@astrojs/react` integration provides only the JSX transform.
 
-As a consequence:
+As a consequence, several Kumo components cannot be used and are replaced with native HTML equivalents:
 
-- **`Pagination`** (Kumo) is incompatible — it requires a `setPage` state callback. All pagination uses plain `<a>` links with URL query parameters.
-- **`Input`** (Kumo) is a controlled React component, incompatible with plain HTML `method="get"` forms. Filter inputs use native `<input>` elements styled with Kumo token classes.
+| Kumo component | Problem                                                 | Replacement                               |
+| -------------- | ------------------------------------------------------- | ----------------------------------------- |
+| `Pagination`   | Requires `setPage` state callback                       | Plain `<a>` links with URL query params   |
+| `Input`        | Controlled React component, breaks `method="get"` forms | Native `<input>` with Kumo token classes  |
+| `Button`       | Renders a disclosure marker when server-rendered        | Native `<button>` with Kumo token classes |
 
 ### Kumo design tokens (Tailwind v4)
 

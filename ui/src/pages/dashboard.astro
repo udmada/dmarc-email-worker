@@ -53,11 +53,11 @@ const [stats, recent] = await Promise.all([
       <Table>
         <Table.Header>
           <Table.Row>
-            <Table.Head>Domain</Table.Head>
-            <Table.Head>Org</Table.Head>
-            <Table.Head>Date</Table.Head>
-            <Table.Head>Policy</Table.Head>
-            <Table.Head className="sr-only">Actions</Table.Head>
+            <Table.Head className="px-4 py-3">Domain</Table.Head>
+            <Table.Head className="px-4 py-3">Org</Table.Head>
+            <Table.Head className="px-4 py-3">Date</Table.Head>
+            <Table.Head className="px-4 py-3">Policy</Table.Head>
+            <Table.Head className="px-4 py-3 sr-only">Actions</Table.Head>
           </Table.Row>
         </Table.Header>
         <Table.Body>
@@ -68,10 +68,10 @@ const [stats, recent] = await Promise.all([
           ) : (
             recent.map((r) => (
               <Table.Row key={r.report_id}>
-                <Table.Cell className="font-mono text-sm">{r.domain}</Table.Cell>
-                <Table.Cell className="text-kumo-subtle">{r.org_name}</Table.Cell>
-                <Table.Cell className="text-kumo-subtle">{formatDate(r.begin_date)}</Table.Cell>
-                <Table.Cell>
+                <Table.Cell className="px-4 py-3 font-mono text-sm">{r.domain}</Table.Cell>
+                <Table.Cell className="px-4 py-3 text-kumo-subtle">{r.org_name}</Table.Cell>
+                <Table.Cell className="px-4 py-3 text-kumo-subtle">{formatDate(r.begin_date)}</Table.Cell>
+                <Table.Cell className="px-4 py-3">
                   <Badge
                     variant={
                       r.policy_p === "reject"
@@ -84,7 +84,7 @@ const [stats, recent] = await Promise.all([
                     {r.policy_p}
                   </Badge>
                 </Table.Cell>
-                <Table.Cell>
+                <Table.Cell className="px-4 py-3">
                   <a
                     href={`/dmarc-reports/${r.report_id}`}
                     class="text-sm text-kumo-link hover:text-kumo-link/70 transition-colors"

@@ -1,0 +1,108 @@
+---
+import Layout from "../components/Layout.astro";
+import { getTlsReports, formatDate, totalPages } from "../lib/db";
+
+const db = Astro.locals.runtime.env.DB;
+const url = Astro.url;
+
+const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10));
+const domain = url.searchParams.get("domain") ?? undefined;
+
+const { rows, total, pageSize } = await getTlsReports(db, page, domain);
+const pages = totalPages(total, pageSize);
+
+function pageUrl(p: number): string {
+  const params = new URLSearchParams(url.searchParams);
+  params.set("page", String(p));
+  return `/tls-reports?${params}`;
+}
+---
+
+<Layout title="TLS Reports">
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold">TLS Reports</h1>
+    <p class="text-base-content/60 text-sm mt-1">{total} reports total</p>
+  </div>
+
+  <!-- Filters -->
+  <form method="get" class="flex gap-3 mb-6">
+    <input
+      type="text"
+      name="domain"
+      value={domain ?? ""}
+      placeholder="Filter by policy domain…"
+      class="input input-bordered input-sm w-56"
+    />
+    <button type="submit" class="btn btn-sm btn-primary">Filter</button>
+    <a href="/tls-reports" class="btn btn-sm btn-ghost">Clear</a>
+  </form>
+
+  <!-- Table -->
+  <div class="card bg-base-200">
+    <div class="overflow-x-auto">
+      <table class="table table-zebra">
+        <thead>
+          <tr>
+            <th>Org</th>
+            <th>Policy Domain</th>
+            <th>Policy Type</th>
+            <th>Date</th>
+            <th>Failures</th>
+            <th class="sr-only">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr>
+              <td class="text-base-content/70">{r.org_name}</td>
+              <td class="font-mono text-sm">{r.policy_domain}</td>
+              <td>
+                <span class="badge badge-sm badge-ghost">{r.policy_type}</span>
+              </td>
+              <td class="text-base-content/70">{formatDate(r.begin_date)}</td>
+              <td>
+                <span class:list={[
+                  "font-semibold",
+                  r.total_failures > 0 ? "text-error" : "text-success",
+                ]}>
+                  {r.total_failures}
+                </span>
+              </td>
+              <td>
+                <a href={`/tls-reports/${r.id}`} class="btn btn-xs btn-ghost">
+                  View <span aria-hidden="true">→</span>
+                </a>
+              </td>
+            </tr>
+          ))}
+          {rows.length === 0 && (
+            <tr>
+              <td colspan={6} class="text-center text-base-content/40 py-8">No TLS reports found.</td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  {pages > 1 && (
+    <div class="flex justify-center mt-6 gap-1">
+      {page > 1 && (
+        <a href={pageUrl(page - 1)} class="btn btn-sm btn-ghost">
+          <span aria-hidden="true">←</span> Prev
+        </a>
+      )}
+      {Array.from({ length: pages }, (_, i) => i + 1).map((p) => (
+        <a href={pageUrl(p)} class:list={["btn btn-sm", p === page ? "btn-primary" : "btn-ghost"]}>
+          {p}
+        </a>
+      ))}
+      {page < pages && (
+        <a href={pageUrl(page + 1)} class="btn btn-sm btn-ghost">
+          Next <span aria-hidden="true">→</span>
+        </a>
+      )}
+    </div>
+  )}
+</Layout>

@@ -1,0 +1,106 @@
+---
+import { Badge, Surface, Table } from "@cloudflare/kumo";
+import { env } from "cloudflare:workers";
+import Layout from "../../components/Layout.astro";
+import { formatDate, getTlsReport } from "../../lib/db";
+
+const db = env.DB;
+const { id } = Astro.params;
+
+if (id == null) return Astro.redirect("/tls-reports");
+
+const numericId = parseInt(id, 10);
+if (isNaN(numericId)) return Astro.redirect("/tls-reports");
+
+const report = await getTlsReport(db, numericId);
+if (!report) return Astro.redirect("/tls-reports");
+
+interface FailureDetail {
+  "result-type": string;
+  "sending-mta-ip": string;
+  "receiving-mx-hostname": string;
+  "failed-session-count": number;
+}
+let failures: FailureDetail[] = [];
+try {
+  failures = report.failure_details
+    ? (JSON.parse(report.failure_details) as FailureDetail[])
+    : [];
+} catch {
+  failures = [];
+}
+---
+
+<Layout title={`TLS Report — ${report.policy_domain}`}>
+  <a href="/tls-reports" class="inline-flex items-center gap-1 text-sm text-kumo-subtle hover:text-kumo-default transition-colors mb-4">
+    <span aria-hidden="true">←</span> Back to TLS Reports
+  </a>
+
+  <Surface className="mb-6">
+    <div class="p-6">
+      <div class="flex items-start justify-between">
+        <div>
+          <h1 class="text-xl font-semibold text-kumo-default">{report.policy_domain}</h1>
+          <p class="text-sm text-kumo-subtle mt-0.5">{report.org_name}</p>
+        </div>
+        <Badge variant="secondary">{report.policy_type}</Badge>
+      </div>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4 text-sm">
+        <div>
+          <span class="text-xs text-kumo-inactive uppercase tracking-wide">Date</span>
+          <p class="text-kumo-default mt-0.5">{formatDate(report.begin_date)}</p>
+        </div>
+        <div>
+          <span class="text-xs text-kumo-inactive uppercase tracking-wide">Successful Sessions</span>
+          <p class="font-semibold text-kumo-success mt-0.5">{report.total_success}</p>
+        </div>
+        <div>
+          <span class="text-xs text-kumo-inactive uppercase tracking-wide">Failed Sessions</span>
+          <p class={`font-semibold mt-0.5 ${report.total_failures > 0 ? "text-kumo-danger" : "text-kumo-success"}`}>
+            {report.total_failures}
+          </p>
+        </div>
+        <div>
+          <span class="text-xs text-kumo-inactive uppercase tracking-wide">Report ID</span>
+          <p class="font-mono text-xs truncate text-kumo-subtle mt-0.5">{report.report_id}</p>
+        </div>
+      </div>
+    </div>
+  </Surface>
+
+  {failures.length > 0 ? (
+    <Surface>
+      <div class="px-6 py-4 border-b border-kumo-line">
+        <h2 class="font-semibold text-kumo-default">Failure Details</h2>
+      </div>
+      <div class="overflow-x-auto">
+        <Table>
+          <Table.Header>
+            <Table.Row>
+              <Table.Head>Result Type</Table.Head>
+              <Table.Head>Sending MTA IP</Table.Head>
+              <Table.Head>Receiving MX</Table.Head>
+              <Table.Head>Failed Sessions</Table.Head>
+            </Table.Row>
+          </Table.Header>
+          <Table.Body>
+            {failures.map((f, i) => (
+              <Table.Row key={i}>
+                <Table.Cell>
+                  <Badge variant="destructive">{f["result-type"]}</Badge>
+                </Table.Cell>
+                <Table.Cell className="font-mono text-sm">{f["sending-mta-ip"]}</Table.Cell>
+                <Table.Cell className="font-mono text-sm text-kumo-subtle">{f["receiving-mx-hostname"]}</Table.Cell>
+                <Table.Cell className="font-semibold text-kumo-danger">{f["failed-session-count"]}</Table.Cell>
+              </Table.Row>
+            ))}
+          </Table.Body>
+        </Table>
+      </div>
+    </Surface>
+  ) : (
+    <Surface className="p-6 text-center text-kumo-inactive text-sm">
+      No failure details recorded for this report.
+    </Surface>
+  )}
+</Layout>

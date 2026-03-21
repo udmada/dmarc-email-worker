@@ -25,6 +25,29 @@ run = "pnpm lint"
 description = "Run format check and lint"
 run = "pnpm test"
 
+[tasks."generate:pkl"]
+description = "Generate wrangler.json for UI from Pkl"
+run = "pkl eval --format json pkl/ui.pkl -o ui/wrangler.json"
+
+[tasks."dev:worker"]
+description = "Start email worker dev server"
+run = "wrangler dev"
+
+[tasks."dev:ui"]
+description = "Start Astro UI dev server"
+dir = "ui"
+run = "pnpm dev"
+
+[tasks."deploy:worker"]
+description = "Deploy email worker"
+run = "wrangler deploy"
+
+[tasks."deploy:ui"]
+description = "Build and deploy Astro UI"
+depends = ["generate:pkl"]
+dir = "ui"
+run = "pnpm build && wrangler deploy"
+
 [tasks.deploy]
-description = "Deploy to Cloudflare Workers"
-run = "pnpm run deploy"
+description = "Deploy all (worker + UI)"
+depends = ["deploy:worker", "deploy:ui"]

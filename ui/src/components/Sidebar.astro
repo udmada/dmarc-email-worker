@@ -1,0 +1,28 @@
+---
+const links = [
+  { href: "/dashboard", label: "Dashboard" },
+  { href: "/dmarc-reports", label: "DMARC Reports" },
+  { href: "/tls-reports", label: "TLS Reports" },
+];
+const current = Astro.url.pathname;
+---
+<aside class="w-56 min-h-screen bg-kumo-recessed border-r border-kumo-line flex flex-col">
+  <div class="p-4 border-b border-kumo-line">
+    <span class="font-semibold text-base text-kumo-default tracking-tight">DMARC Viewer</span>
+  </div>
+  <nav class="flex-1 p-3 flex flex-col gap-1">
+    {links.map((link) => (
+      <a
+        href={link.href}
+        class:list={[
+          "flex items-center px-3 py-2 rounded-md text-sm transition-colors",
+          current.startsWith(link.href)
+            ? "bg-kumo-tint text-kumo-default font-medium"
+            : "text-kumo-subtle hover:bg-kumo-tint hover:text-kumo-default",
+        ]}
+      >
+        {link.label}
+      </a>
+    ))}
+  </nav>
+</aside>

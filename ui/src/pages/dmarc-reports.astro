@@ -1,0 +1,140 @@
+---
+import { Badge, Button, Surface, Table } from "@cloudflare/kumo";
+import { env } from "cloudflare:workers";
+import Layout from "../components/Layout.astro";
+import { formatDate, getDmarcReports, totalPages } from "../lib/db";
+
+const db = env.DB;
+const url = Astro.url;
+
+const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10) || 1);
+const domain = url.searchParams.get("domain") ?? undefined;
+const fromParam = url.searchParams.get("from");
+const toParam = url.searchParams.get("to");
+const fromUnix = fromParam != null ? Math.floor(new Date(fromParam).getTime() / 1000) : NaN;
+const toUnix = toParam != null ? Math.floor(new Date(toParam).getTime() / 1000) : NaN;
+const from = isNaN(fromUnix) ? undefined : fromUnix;
+const to = isNaN(toUnix) ? undefined : toUnix;
+
+const { rows, total, pageSize } = await getDmarcReports(db, page, domain, from, to);
+const pages = totalPages(total, pageSize);
+
+function pageUrl(p: number): string {
+  const params = new URLSearchParams(url.searchParams);
+  params.set("page", String(p));
+  return `/dmarc-reports?${params}`;
+}
+---
+
+<Layout title="DMARC Reports">
+  <div class="mb-6">
+    <h1 class="text-2xl font-semibold text-kumo-default">DMARC Reports</h1>
+    <p class="text-sm text-kumo-subtle mt-1">{total} reports total</p>
+  </div>
+
+  <!-- Filters -->
+  <form method="get" class="flex gap-3 mb-6 flex-wrap items-center">
+    <input
+      type="text"
+      name="domain"
+      value={domain ?? ""}
+      placeholder="Filter by domain…"
+      class="h-8 px-3 text-sm rounded-md border border-kumo-line bg-kumo-base text-kumo-default placeholder:text-kumo-placeholder focus:outline-2 focus:outline-kumo-brand w-48"
+    />
+    <input
+      type="date"
+      name="from"
+      value={fromParam ?? ""}
+      class="h-8 px-3 text-sm rounded-md border border-kumo-line bg-kumo-base text-kumo-default focus:outline-2 focus:outline-kumo-brand"
+    />
+    <input
+      type="date"
+      name="to"
+      value={toParam ?? ""}
+      class="h-8 px-3 text-sm rounded-md border border-kumo-line bg-kumo-base text-kumo-default focus:outline-2 focus:outline-kumo-brand"
+    />
+    <Button type="submit" variant="primary" size="sm">Filter</Button>
+    <a href="/dmarc-reports" class="text-sm text-kumo-subtle hover:text-kumo-default transition-colors">Clear</a>
+  </form>
+
+  <!-- Table -->
+  <Surface className="overflow-x-auto">
+    <Table>
+      <Table.Header>
+        <Table.Row>
+          <Table.Head>Report ID</Table.Head>
+          <Table.Head>Domain</Table.Head>
+          <Table.Head>Org</Table.Head>
+          <Table.Head>Begin Date</Table.Head>
+          <Table.Head>Policy</Table.Head>
+          <Table.Head className="sr-only">Actions</Table.Head>
+        </Table.Row>
+      </Table.Header>
+      <Table.Body>
+        {rows.length === 0 ? (
+          <tr>
+            <td colspan="6" class="text-center py-8 text-kumo-inactive">No reports found.</td>
+          </tr>
+        ) : (
+          rows.map((r) => (
+            <Table.Row key={r.report_id}>
+              <Table.Cell className="font-mono text-xs text-kumo-subtle max-w-32 truncate" title={r.report_id}>
+                {r.report_id.slice(0, 12)}…
+              </Table.Cell>
+              <Table.Cell className="font-mono text-sm">{r.domain}</Table.Cell>
+              <Table.Cell className="text-kumo-subtle">{r.org_name}</Table.Cell>
+              <Table.Cell className="text-kumo-subtle">{formatDate(r.begin_date)}</Table.Cell>
+              <Table.Cell>
+                <Badge
+                  variant={
+                    r.policy_p === "reject"
+                      ? "destructive"
+                      : r.policy_p === "quarantine"
+                        ? "outline"
+                        : "secondary"
+                  }
+                >
+                  {r.policy_p}
+                </Badge>
+              </Table.Cell>
+              <Table.Cell>
+                <a
+                  href={`/dmarc-reports/${r.report_id}`}
+                  class="text-sm text-kumo-link hover:text-kumo-link/70 transition-colors"
+                >
+                  View <span aria-hidden="true">→</span>
+                </a>
+              </Table.Cell>
+            </Table.Row>
+          ))
+        )}
+      </Table.Body>
+    </Table>
+  </Surface>
+
+  <!-- Pagination -->
+  {pages > 1 && (
+    <div class="flex justify-center mt-6 gap-1 flex-wrap">
+      {page > 1 && (
+        <a href={pageUrl(page - 1)} class="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-md border border-kumo-line text-kumo-default hover:bg-kumo-recessed transition-colors">
+          <span aria-hidden="true">←</span> Prev
+        </a>
+      )}
+      {Array.from({ length: pages }, (_, i) => i + 1).map((p) => (
+        <a
+          href={pageUrl(p)}
+          class={`inline-flex items-center px-3 py-1.5 text-sm rounded-md transition-colors ${
+            p === page
+              ? "bg-kumo-contrast text-kumo-inverse"
+              : "border border-kumo-line text-kumo-default hover:bg-kumo-recessed"
+          }`}
+        >{p}</a>
+      ))}
+      {page < pages && (
+        <a href={pageUrl(page + 1)} class="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-md border border-kumo-line text-kumo-default hover:bg-kumo-recessed transition-colors">
+          Next <span aria-hidden="true">→</span>
+        </a>
+      )}
+    </div>
+  )}
+</Layout>

@@ -11,6 +11,9 @@ on {
             "wrangler.toml"
             "tsconfig.json"
             "mise.toml"
+            "ui/src/**"
+            "ui/astro.config.mjs"
+            "pkl/**"
         }
     }
     pull_request {
@@ -21,6 +24,9 @@ on {
             "wrangler.toml"
             "tsconfig.json"
             "mise.toml"
+            "ui/src/**"
+            "ui/astro.config.mjs"
+            "pkl/**"
         }
     }
 }
@@ -49,6 +55,11 @@ jobs {
                 name = "Deploy to Cloudflare Workers"
                 `if` = "github.event_name == 'push'"
                 run = "mise run deploy"
+            }
+            new {
+                name = "Deploy UI to Cloudflare"
+                `if` = "github.event_name == 'push'"
+                run = "mise run deploy:ui"
             }
         }
     }

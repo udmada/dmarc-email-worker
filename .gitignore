@@ -14,3 +14,11 @@ node_modules/
 **/.env
 .DS_Store
 .wrangler/.worktrees/
+
+# Generated from Pkl
+ui/wrangler.json
+
+# Astro generated
+ui/.astro/
+ui/dist/
+ui/.wrangler/

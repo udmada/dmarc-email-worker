@@ -1,0 +1,157 @@
+---
+import { Badge, Surface, Table } from "@cloudflare/kumo";
+import { env } from "cloudflare:workers";
+import Layout from "../../components/Layout.astro";
+import { formatDate, getDmarcRecords, getDmarcReport } from "../../lib/db";
+
+const db = env.DB;
+const { id } = Astro.params;
+
+if (id == null) return Astro.redirect("/dmarc-reports");
+
+const report = await getDmarcReport(db, id);
+if (!report) return Astro.redirect("/dmarc-reports");
+
+const recordsPromise = getDmarcRecords(db, id);
+---
+
+<Layout title={`Report ${report.report_id.slice(0, 12)}`}>
+  <a href="/dmarc-reports" class="inline-flex items-center gap-1 text-sm text-kumo-subtle hover:text-kumo-default transition-colors mb-4">
+    <span aria-hidden="true">←</span> Back to Reports
+  </a>
+
+  <!-- Metadata card -->
+  <Surface className="mb-6">
+    <div class="p-6">
+      <div class="flex items-start justify-between">
+        <div>
+          <h1 class="text-xl font-semibold text-kumo-default">{report.domain}</h1>
+          <p class="text-xs font-mono text-kumo-subtle mt-0.5">{report.report_id}</p>
+        </div>
+        <Badge
+          variant={
+            report.policy_p === "reject"
+              ? "destructive"
+              : report.policy_p === "quarantine"
+                ? "outline"
+                : "secondary"
+          }
+        >
+          {report.policy_p}
+        </Badge>
+      </div>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4 text-sm">
+        <div>
+          <span class="text-xs text-kumo-inactive uppercase tracking-wide">Org</span>
+          <p class="text-kumo-default mt-0.5">{report.org_name}</p>
+        </div>
+        <div>
+          <span class="text-xs text-kumo-inactive uppercase tracking-wide">Date</span>
+          <p class="text-kumo-default mt-0.5">{formatDate(report.begin_date)}</p>
+        </div>
+        <div>
+          <span class="text-xs text-kumo-inactive uppercase tracking-wide">DKIM Alignment</span>
+          <p class="text-kumo-default uppercase mt-0.5">{report.adkim}</p>
+        </div>
+        <div>
+          <span class="text-xs text-kumo-inactive uppercase tracking-wide">SPF Alignment</span>
+          <p class="text-kumo-default uppercase mt-0.5">{report.aspf}</p>
+        </div>
+      </div>
+    </div>
+  </Surface>
+
+  <!-- Records section — streamed -->
+  {async () => {
+    const records = await recordsPromise;
+
+    if (records.length === 0) {
+      return (
+        <Surface className="p-6 text-kumo-subtle text-sm">
+          No records found for this report.
+        </Surface>
+      );
+    }
+
+    const total = records.reduce((s, r) => s + r.count, 0);
+    const dkimPass = records.filter((r) => r.dkim_result === "pass").reduce((s, r) => s + r.count, 0);
+    const spfPass = records.filter((r) => r.spf_result === "pass").reduce((s, r) => s + r.count, 0);
+    const dkimPct = total > 0 ? Math.round((dkimPass / total) * 100) : 0;
+    const spfPct = total > 0 ? Math.round((spfPass / total) * 100) : 0;
+
+    return (
+      <>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          <Surface className="p-5">
+            <p class="text-xs text-kumo-subtle uppercase tracking-wide">Total Messages</p>
+            <p class="text-3xl font-bold text-kumo-default mt-1">{total}</p>
+            <p class="text-xs text-kumo-inactive mt-1">{records.length} source IPs</p>
+          </Surface>
+          <Surface className="p-5">
+            <p class="text-xs text-kumo-subtle uppercase tracking-wide">DKIM Pass</p>
+            <p class={`text-3xl font-bold mt-1 ${dkimPct === 100 ? "text-kumo-success" : "text-kumo-warning"}`}>
+              {dkimPct}%
+            </p>
+            <p class="text-xs text-kumo-inactive mt-1">{dkimPass} / {total}</p>
+          </Surface>
+          <Surface className="p-5">
+            <p class="text-xs text-kumo-subtle uppercase tracking-wide">SPF Pass</p>
+            <p class={`text-3xl font-bold mt-1 ${spfPct === 100 ? "text-kumo-success" : "text-kumo-warning"}`}>
+              {spfPct}%
+            </p>
+            <p class="text-xs text-kumo-inactive mt-1">{spfPass} / {total}</p>
+          </Surface>
+        </div>
+
+        <Surface>
+          <div class="flex items-center justify-between px-6 py-4 border-b border-kumo-line">
+            <h2 class="font-semibold text-kumo-default">Per-Record Breakdown</h2>
+            {report.raw_xml && (
+              <a
+                href={`/dmarc-reports/${id}/raw`}
+                class="text-sm text-kumo-link hover:text-kumo-link/70 transition-colors"
+                download={`${id}.xml`}
+              >
+                Download XML
+              </a>
+            )}
+          </div>
+          <div class="overflow-x-auto">
+            <Table>
+              <Table.Header>
+                <Table.Row>
+                  <Table.Head>Source IP</Table.Head>
+                  <Table.Head>Count</Table.Head>
+                  <Table.Head>DKIM</Table.Head>
+                  <Table.Head>SPF</Table.Head>
+                  <Table.Head>Disposition</Table.Head>
+                  <Table.Head>Header From</Table.Head>
+                </Table.Row>
+              </Table.Header>
+              <Table.Body>
+                {records.map((r) => (
+                  <Table.Row key={r.id}>
+                    <Table.Cell className="font-mono text-sm">{r.source_ip}</Table.Cell>
+                    <Table.Cell>{r.count}</Table.Cell>
+                    <Table.Cell>
+                      <Badge variant={r.dkim_result === "pass" ? "success" : "destructive"}>
+                        {r.dkim_result ?? "—"}
+                      </Badge>
+                    </Table.Cell>
+                    <Table.Cell>
+                      <Badge variant={r.spf_result === "pass" ? "success" : "destructive"}>
+                        {r.spf_result ?? "—"}
+                      </Badge>
+                    </Table.Cell>
+                    <Table.Cell className="text-kumo-subtle">{r.disposition ?? "—"}</Table.Cell>
+                    <Table.Cell className="font-mono text-sm text-kumo-subtle">{r.header_from ?? "—"}</Table.Cell>
+                  </Table.Row>
+                ))}
+              </Table.Body>
+            </Table>
+          </div>
+        </Surface>
+      </>
+    );
+  }}
+</Layout>

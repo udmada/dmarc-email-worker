@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "astro build",
+    "build": "astro build && printf '_worker.js\\n_routes.json\\n' > dist/.assetsignore",
     "check": "astro check",
     "dev": "astro dev"
   },

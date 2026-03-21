@@ -19,9 +19,14 @@ interface FailureDetail {
   "receiving-mx-hostname": string;
   "failed-session-count": number;
 }
-const failures: FailureDetail[] = report.failure_details
-  ? (JSON.parse(report.failure_details) as FailureDetail[])
-  : [];
+let failures: FailureDetail[] = [];
+if (report.failure_details) {
+  try {
+    failures = JSON.parse(report.failure_details) as FailureDetail[];
+  } catch {
+    // malformed JSON — treat as no failure details
+  }
+}
 ---
 
 <Layout title={`TLS Report — ${report.policy_domain}`}>
@@ -72,10 +77,10 @@ const failures: FailureDetail[] = report.failure_details
         <table class="table table-zebra table-sm">
           <thead>
             <tr>
-              <th>Result Type</th>
-              <th>Sending MTA IP</th>
-              <th>Receiving MX</th>
-              <th>Failed Sessions</th>
+              <th scope="col">Result Type</th>
+              <th scope="col">Sending MTA IP</th>
+              <th scope="col">Receiving MX</th>
+              <th scope="col">Failed Sessions</th>
             </tr>
           </thead>
           <tbody>

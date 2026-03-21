@@ -1,7 +1,8 @@
 ---
-import Layout from "../components/Layout.astro";
-import { getDashboardStats, getRecentDmarcReports, formatDate } from "../lib/db";
+import { Badge, Surface, Table } from "@cloudflare/kumo";
 import { env } from "cloudflare:workers";
+import Layout from "../components/Layout.astro";
+import { formatDate, getDashboardStats, getRecentDmarcReports } from "../lib/db";
 
 const db = env.DB;
 const [stats, recent] = await Promise.all([
@@ -12,83 +13,90 @@ const [stats, recent] = await Promise.all([
 
 <Layout title="Dashboard">
   <div class="mb-6">
-    <h1 class="text-2xl font-bold">Overview</h1>
-    <p class="text-base-content/60 text-sm mt-1">DMARC & TLS-RPT report summary</p>
+    <h1 class="text-2xl font-semibold text-kumo-default">Overview</h1>
+    <p class="text-sm text-kumo-subtle mt-1">DMARC & TLS-RPT report summary</p>
   </div>
 
   <!-- Stat cards -->
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-    <div class="stat bg-base-200 rounded-box">
-      <div class="stat-title">DMARC Reports</div>
-      <div class="stat-value text-primary">{stats.dmarcThisMonth}</div>
-      <div class="stat-desc">this month</div>
-    </div>
-    <div class="stat bg-base-200 rounded-box">
-      <div class="stat-title">TLS Reports</div>
-      <div class="stat-value text-secondary">{stats.tlsThisMonth}</div>
-      <div class="stat-desc">this month</div>
-    </div>
-    <div class="stat bg-base-200 rounded-box">
-      <div class="stat-title">DKIM Pass Rate</div>
-      <div class="stat-value text-success">{stats.dkimPassRate}%</div>
-      <div class="stat-desc">all time</div>
-    </div>
-    <div class="stat bg-base-200 rounded-box">
-      <div class="stat-title">SPF Pass Rate</div>
-      <div class="stat-value text-success">{stats.spfPassRate}%</div>
-      <div class="stat-desc">all time</div>
-    </div>
+    <Surface className="p-5">
+      <p class="text-xs text-kumo-subtle uppercase tracking-wide">DMARC Reports</p>
+      <p class="text-3xl font-bold text-kumo-brand mt-1">{stats.dmarcThisMonth}</p>
+      <p class="text-xs text-kumo-inactive mt-1">this month</p>
+    </Surface>
+    <Surface className="p-5">
+      <p class="text-xs text-kumo-subtle uppercase tracking-wide">TLS Reports</p>
+      <p class="text-3xl font-bold text-kumo-link mt-1">{stats.tlsThisMonth}</p>
+      <p class="text-xs text-kumo-inactive mt-1">this month</p>
+    </Surface>
+    <Surface className="p-5">
+      <p class="text-xs text-kumo-subtle uppercase tracking-wide">DKIM Pass Rate</p>
+      <p class="text-3xl font-bold text-kumo-success mt-1">{stats.dkimPassRate}%</p>
+      <p class="text-xs text-kumo-inactive mt-1">all time</p>
+    </Surface>
+    <Surface className="p-5">
+      <p class="text-xs text-kumo-subtle uppercase tracking-wide">SPF Pass Rate</p>
+      <p class="text-3xl font-bold text-kumo-success mt-1">{stats.spfPassRate}%</p>
+      <p class="text-xs text-kumo-inactive mt-1">all time</p>
+    </Surface>
   </div>
 
   <!-- Recent activity -->
-  <div class="card bg-base-200">
-    <div class="card-body p-0">
-      <div class="flex items-center justify-between px-6 py-4 border-b border-base-300">
-        <h2 class="font-semibold">Recent DMARC Reports</h2>
-        <a href="/dmarc-reports" class="btn btn-sm btn-ghost">View all <span aria-hidden="true">→</span></a>
-      </div>
-      <div class="overflow-x-auto">
-        <table class="table table-zebra">
-          <thead>
-            <tr>
-              <th>Domain</th>
-              <th>Org</th>
-              <th>Date</th>
-              <th>Policy</th>
-              <th class="sr-only">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {recent.length === 0 ? (
-              <tr>
-                <td colspan="5" class="text-center text-base-content/50 py-8">No reports yet.</td>
-              </tr>
-            ) : (
-              recent.map((r) => (
-                <tr>
-                  <td class="font-mono text-sm">{r.domain}</td>
-                  <td class="text-base-content/70">{r.org_name}</td>
-                  <td class="text-base-content/70">{formatDate(r.begin_date)}</td>
-                  <td>
-                    <span class:list={[
-                      "badge badge-sm",
-                      r.policy_p === "reject" ? "badge-error" :
-                      r.policy_p === "quarantine" ? "badge-warning" : "badge-ghost",
-                    ]}>
-                      {r.policy_p}
-                    </span>
-                  </td>
-                  <td>
-                    <a href={`/dmarc-reports/${r.report_id}`} class="btn btn-xs btn-ghost">
-                      View <span aria-hidden="true">→</span>
-                    </a>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+  <Surface>
+    <div class="flex items-center justify-between px-6 py-4 border-b border-kumo-line">
+      <h2 class="font-semibold text-kumo-default">Recent DMARC Reports</h2>
+      <a href="/dmarc-reports" class="text-sm text-kumo-link hover:text-kumo-link/70 transition-colors">
+        View all <span aria-hidden="true">→</span>
+      </a>
     </div>
-  </div>
+    <div class="overflow-x-auto">
+      <Table>
+        <Table.Header>
+          <Table.Row>
+            <Table.Head>Domain</Table.Head>
+            <Table.Head>Org</Table.Head>
+            <Table.Head>Date</Table.Head>
+            <Table.Head>Policy</Table.Head>
+            <Table.Head className="sr-only">Actions</Table.Head>
+          </Table.Row>
+        </Table.Header>
+        <Table.Body>
+          {recent.length === 0 ? (
+            <tr>
+              <td colspan="5" class="text-center py-8 text-kumo-inactive">No reports yet.</td>
+            </tr>
+          ) : (
+            recent.map((r) => (
+              <Table.Row key={r.report_id}>
+                <Table.Cell className="font-mono text-sm">{r.domain}</Table.Cell>
+                <Table.Cell className="text-kumo-subtle">{r.org_name}</Table.Cell>
+                <Table.Cell className="text-kumo-subtle">{formatDate(r.begin_date)}</Table.Cell>
+                <Table.Cell>
+                  <Badge
+                    variant={
+                      r.policy_p === "reject"
+                        ? "destructive"
+                        : r.policy_p === "quarantine"
+                          ? "outline"
+                          : "secondary"
+                    }
+                  >
+                    {r.policy_p}
+                  </Badge>
+                </Table.Cell>
+                <Table.Cell>
+                  <a
+                    href={`/dmarc-reports/${r.report_id}`}
+                    class="text-sm text-kumo-link hover:text-kumo-link/70 transition-colors"
+                  >
+                    View <span aria-hidden="true">→</span>
+                  </a>
+                </Table.Cell>
+              </Table.Row>
+            ))
+          )}
+        </Table.Body>
+      </Table>
+    </div>
+  </Surface>
 </Layout>

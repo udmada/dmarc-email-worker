@@ -1,8 +1,9 @@
 ---
 import Layout from "../components/Layout.astro";
 import { getDashboardStats, getRecentDmarcReports, formatDate } from "../lib/db";
+import { env } from "cloudflare:workers";
 
-const db = Astro.locals.runtime.env.DB;
+const db = env.DB;
 const [stats, recent] = await Promise.all([
   getDashboardStats(db),
   getRecentDmarcReports(db, 10),

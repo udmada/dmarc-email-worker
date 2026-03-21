@@ -1,8 +1,9 @@
 ---
 import Layout from "../../components/Layout.astro";
 import { getTlsReport, formatDate } from "../../lib/db";
+import { env } from "cloudflare:workers";
 
-const db = Astro.locals.runtime.env.DB;
+const db = env.DB;
 const { id } = Astro.params;
 
 if (id == null) return Astro.redirect("/tls-reports");

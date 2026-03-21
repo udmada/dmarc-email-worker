@@ -1,8 +1,9 @@
 import type { APIRoute } from "astro";
+import { env } from "cloudflare:workers";
 
-export const GET: APIRoute = async ({ params, locals }) => {
+export const GET: APIRoute = async ({ params }) => {
   if (params.id == null) return new Response("Not found", { status: 404 });
-  const db = locals.runtime.env.DB;
+  const db = env.DB;
   const row = await db
     .prepare("SELECT raw_xml, report_id FROM dmarc_reports WHERE report_id = ?")
     .bind(params.id)

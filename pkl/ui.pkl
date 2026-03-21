@@ -3,7 +3,6 @@ module ui
 import "shared.pkl" as shared
 
 name = "dmarc-ui"
-main = "dist/_worker.js"
 compatibility_date = shared.compatibilityDate
 compatibility_flags = shared.compatibilityFlags
 
@@ -16,5 +15,5 @@ d1_databases: Listing<Dynamic> = new {
 }
 
 assets: Dynamic = new {
-  directory = "./dist"
+  directory = "./dist/client"
 }

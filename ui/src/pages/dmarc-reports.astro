@@ -1,8 +1,9 @@
 ---
 import Layout from "../components/Layout.astro";
 import { getDmarcReports, formatDate, totalPages } from "../lib/db";
+import { env } from "cloudflare:workers";
 
-const db = Astro.locals.runtime.env.DB;
+const db = env.DB;
 const url = Astro.url;
 
 const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10));

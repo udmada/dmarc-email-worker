@@ -1,28 +1,26 @@
 ---
 const links = [
-  { href: "/dashboard", label: "Dashboard", icon: "⊞" },
-  { href: "/dmarc-reports", label: "DMARC Reports", icon: "✉" },
-  { href: "/tls-reports", label: "TLS Reports", icon: "🔒" },
+  { href: "/dashboard", label: "Dashboard" },
+  { href: "/dmarc-reports", label: "DMARC Reports" },
+  { href: "/tls-reports", label: "TLS Reports" },
 ];
 const current = Astro.url.pathname;
 ---
-
-<aside class="w-56 min-h-screen bg-base-200 flex flex-col">
-  <div class="p-4 border-b border-base-300">
-    <span class="font-bold text-lg tracking-tight">DMARC Viewer</span>
+<aside class="w-56 min-h-screen bg-kumo-recessed border-r border-kumo-line flex flex-col">
+  <div class="p-4 border-b border-kumo-line">
+    <span class="font-semibold text-base text-kumo-default tracking-tight">DMARC Viewer</span>
   </div>
   <nav class="flex-1 p-3 flex flex-col gap-1">
     {links.map((link) => (
       <a
         href={link.href}
         class:list={[
-          "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors",
+          "flex items-center px-3 py-2 rounded-md text-sm transition-colors",
           current.startsWith(link.href)
-            ? "bg-primary text-primary-content"
-            : "hover:bg-base-300 text-base-content",
+            ? "bg-kumo-tint text-kumo-default font-medium"
+            : "text-kumo-subtle hover:bg-kumo-tint hover:text-kumo-default",
         ]}
       >
-        <span>{link.icon}</span>
         {link.label}
       </a>
     ))}

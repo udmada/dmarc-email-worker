@@ -11,14 +11,10 @@ const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10) || 1)
 const domain = url.searchParams.get("domain") ?? undefined;
 const fromParam = url.searchParams.get("from");
 const toParam = url.searchParams.get("to");
-const from =
-  fromParam != null
-    ? (d => (isNaN(d) ? undefined : d))(Math.floor(new Date(fromParam).getTime() / 1000))
-    : undefined;
-const to =
-  toParam != null
-    ? (d => (isNaN(d) ? undefined : d))(Math.floor(new Date(toParam).getTime() / 1000))
-    : undefined;
+const fromUnix = fromParam != null ? Math.floor(new Date(fromParam).getTime() / 1000) : NaN;
+const toUnix = toParam != null ? Math.floor(new Date(toParam).getTime() / 1000) : NaN;
+const from = isNaN(fromUnix) ? undefined : fromUnix;
+const to = isNaN(toUnix) ? undefined : toUnix;
 
 const { rows, total, pageSize } = await getDmarcReports(db, page, domain, from, to);
 const pages = totalPages(total, pageSize);

@@ -1,7 +1,8 @@
 ---
-import Layout from "../components/Layout.astro";
-import { getTlsReports, formatDate, totalPages } from "../lib/db";
+import { Badge, Button, Surface, Table } from "@cloudflare/kumo";
 import { env } from "cloudflare:workers";
+import Layout from "../components/Layout.astro";
+import { formatDate, getTlsReports, totalPages } from "../lib/db";
 
 const db = env.DB;
 const url = Astro.url;
@@ -21,86 +22,87 @@ function pageUrl(p: number): string {
 
 <Layout title="TLS Reports">
   <div class="mb-6">
-    <h1 class="text-2xl font-bold">TLS Reports</h1>
-    <p class="text-base-content/60 text-sm mt-1">{total} reports total</p>
+    <h1 class="text-2xl font-semibold text-kumo-default">TLS Reports</h1>
+    <p class="text-sm text-kumo-subtle mt-1">{total} reports total</p>
   </div>
 
-  <!-- Filters -->
-  <form method="get" class="flex gap-3 mb-6">
+  <form method="get" class="flex gap-3 mb-6 items-center">
     <input
       type="text"
       name="domain"
       value={domain ?? ""}
       placeholder="Filter by policy domain…"
-      class="input input-bordered input-sm w-56"
+      class="h-8 px-3 text-sm rounded-md border border-kumo-line bg-kumo-base text-kumo-default placeholder:text-kumo-placeholder focus:outline-2 focus:outline-kumo-brand w-56"
     />
-    <button type="submit" class="btn btn-sm btn-primary">Filter</button>
-    <a href="/tls-reports" class="btn btn-sm btn-ghost">Clear</a>
+    <Button type="submit" variant="primary" size="sm">Filter</Button>
+    <a href="/tls-reports" class="text-sm text-kumo-subtle hover:text-kumo-default transition-colors">Clear</a>
   </form>
 
-  <!-- Table -->
-  <div class="card bg-base-200">
-    <div class="overflow-x-auto">
-      <table class="table table-zebra">
-        <thead>
+  <Surface className="overflow-x-auto">
+    <Table>
+      <Table.Header>
+        <Table.Row>
+          <Table.Head>Org</Table.Head>
+          <Table.Head>Policy Domain</Table.Head>
+          <Table.Head>Policy Type</Table.Head>
+          <Table.Head>Date</Table.Head>
+          <Table.Head>Failures</Table.Head>
+          <Table.Head className="sr-only">Actions</Table.Head>
+        </Table.Row>
+      </Table.Header>
+      <Table.Body>
+        {rows.length === 0 ? (
           <tr>
-            <th>Org</th>
-            <th>Policy Domain</th>
-            <th>Policy Type</th>
-            <th>Date</th>
-            <th>Failures</th>
-            <th class="sr-only">Actions</th>
+            <td colspan="6" class="text-center py-8 text-kumo-inactive">No TLS reports found.</td>
           </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => (
-            <tr>
-              <td class="text-base-content/70">{r.org_name}</td>
-              <td class="font-mono text-sm">{r.policy_domain}</td>
-              <td>
-                <span class="badge badge-sm badge-ghost">{r.policy_type}</span>
-              </td>
-              <td class="text-base-content/70">{formatDate(r.begin_date)}</td>
-              <td>
-                <span class:list={[
-                  "font-semibold",
-                  r.total_failures > 0 ? "text-error" : "text-success",
-                ]}>
+        ) : (
+          rows.map((r) => (
+            <Table.Row key={r.id}>
+              <Table.Cell className="text-kumo-subtle">{r.org_name}</Table.Cell>
+              <Table.Cell className="font-mono text-sm">{r.policy_domain}</Table.Cell>
+              <Table.Cell>
+                <Badge variant="secondary">{r.policy_type}</Badge>
+              </Table.Cell>
+              <Table.Cell className="text-kumo-subtle">{formatDate(r.begin_date)}</Table.Cell>
+              <Table.Cell>
+                <span class={r.total_failures > 0 ? "font-semibold text-kumo-danger" : "font-semibold text-kumo-success"}>
                   {r.total_failures}
                 </span>
-              </td>
-              <td>
-                <a href={`/tls-reports/${r.id}`} class="btn btn-xs btn-ghost">
+              </Table.Cell>
+              <Table.Cell>
+                <a
+                  href={`/tls-reports/${r.id}`}
+                  class="text-sm text-kumo-link hover:text-kumo-link/70 transition-colors"
+                >
                   View <span aria-hidden="true">→</span>
                 </a>
-              </td>
-            </tr>
-          ))}
-          {rows.length === 0 && (
-            <tr>
-              <td colspan={6} class="text-center text-base-content/40 py-8">No TLS reports found.</td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-    </div>
-  </div>
+              </Table.Cell>
+            </Table.Row>
+          ))
+        )}
+      </Table.Body>
+    </Table>
+  </Surface>
 
-  <!-- Pagination -->
   {pages > 1 && (
-    <div class="flex justify-center mt-6 gap-1">
+    <div class="flex justify-center mt-6 gap-1 flex-wrap">
       {page > 1 && (
-        <a href={pageUrl(page - 1)} class="btn btn-sm btn-ghost">
+        <a href={pageUrl(page - 1)} class="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-md border border-kumo-line text-kumo-default hover:bg-kumo-recessed transition-colors">
           <span aria-hidden="true">←</span> Prev
         </a>
       )}
       {Array.from({ length: pages }, (_, i) => i + 1).map((p) => (
-        <a href={pageUrl(p)} class:list={["btn btn-sm", p === page ? "btn-primary" : "btn-ghost"]}>
-          {p}
-        </a>
+        <a
+          href={pageUrl(p)}
+          class={`inline-flex items-center px-3 py-1.5 text-sm rounded-md transition-colors ${
+            p === page
+              ? "bg-kumo-contrast text-kumo-inverse"
+              : "border border-kumo-line text-kumo-default hover:bg-kumo-recessed"
+          }`}
+        >{p}</a>
       ))}
       {page < pages && (
-        <a href={pageUrl(page + 1)} class="btn btn-sm btn-ghost">
+        <a href={pageUrl(page + 1)} class="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-md border border-kumo-line text-kumo-default hover:bg-kumo-recessed transition-colors">
           Next <span aria-hidden="true">→</span>
         </a>
       )}

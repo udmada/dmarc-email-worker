@@ -112,8 +112,8 @@ export async function getDmarcReports(
   const bindings: (string | number)[] = [];
 
   if (domain != null) {
-    conditions.push("domain = ?");
-    bindings.push(domain);
+    conditions.push("domain LIKE ?");
+    bindings.push(`%${domain}%`);
   }
   if (from != null) {
     conditions.push("begin_date >= ?");
@@ -184,8 +184,8 @@ export async function getDmarcAlignmentStats(
   const conditions: string[] = [];
   const bindings: (string | number)[] = [];
   if (domain != null) {
-    conditions.push("r.domain = ?");
-    bindings.push(domain);
+    conditions.push("r.domain LIKE ?");
+    bindings.push(`%${domain}%`);
   }
   if (from != null) {
     conditions.push("r.begin_date >= ?");
@@ -237,8 +237,8 @@ export async function getTlsStats(
   const conditions: string[] = [];
   const bindings: (string | number)[] = [];
   if (domain != null) {
-    conditions.push("policy_domain = ?");
-    bindings.push(domain);
+    conditions.push("policy_domain LIKE ?");
+    bindings.push(`%${domain}%`);
   }
   if (from != null) {
     conditions.push("begin_date >= ?");
@@ -290,8 +290,8 @@ export async function getTlsReports(
   const conditions: string[] = [];
   const bindings: (string | number)[] = [];
   if (domain != null) {
-    conditions.push("policy_domain = ?");
-    bindings.push(domain);
+    conditions.push("policy_domain LIKE ?");
+    bindings.push(`%${domain}%`);
   }
   if (from != null) {
     conditions.push("begin_date >= ?");

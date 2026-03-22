@@ -38,7 +38,8 @@ function pageUrl(p: number): string {
     <a href="/tls-reports" class="text-sm text-kumo-subtle hover:text-kumo-default transition-colors">Clear</a>
   </form>
 
-  <Surface className="overflow-x-auto">
+  <Surface className="overflow-hidden">
+    <div class="overflow-x-auto">
     <table class="w-full text-left border-collapse">
       <thead>
         <tr class="border-b border-kumo-line">
@@ -80,6 +81,7 @@ function pageUrl(p: number): string {
         )}
       </tbody>
     </table>
+    </div>
   </Surface>
 
   {pages > 1 && (

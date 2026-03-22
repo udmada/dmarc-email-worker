@@ -64,7 +64,8 @@ function policyClass(p: string): string {
   </form>
 
   <!-- Table -->
-  <Surface className="overflow-x-auto">
+  <Surface className="overflow-hidden">
+    <div class="overflow-x-auto">
     <table class="w-full text-left border-collapse">
       <thead>
         <tr class="border-b border-kumo-line">
@@ -84,8 +85,8 @@ function policyClass(p: string): string {
         ) : (
           rows.map((r) => (
             <tr class="border-b border-kumo-line last:border-b-0 hover:bg-kumo-tint transition-colors">
-              <td class="px-4 py-3 font-mono text-xs text-kumo-subtle max-w-32 truncate" title={r.report_id}>
-                {r.report_id.slice(0, 12)}…
+              <td class="px-4 py-3 font-mono text-xs text-kumo-subtle max-w-48 truncate" title={r.report_id}>
+                {r.report_id}
               </td>
               <td class="px-4 py-3 font-mono text-sm text-kumo-default">{r.domain}</td>
               <td class="px-4 py-3 text-sm text-kumo-subtle">{r.org_name}</td>
@@ -106,6 +107,7 @@ function policyClass(p: string): string {
         )}
       </tbody>
     </table>
+    </div>
   </Surface>
 
   <!-- Pagination -->

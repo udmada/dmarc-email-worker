@@ -14,11 +14,13 @@ const { title } = Astro.props;
     <title>{title} — DMARC Viewer</title>
     <script is:inline>
       (function () {
-        var mq = window.matchMedia("(prefers-color-scheme: dark)");
-        document.documentElement.setAttribute("data-mode", mq.matches ? "dark" : "light");
-        mq.addEventListener("change", function (e) {
-          document.documentElement.setAttribute("data-mode", e.matches ? "dark" : "light");
-        });
+        function applyMode() {
+          var dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+          document.documentElement.setAttribute("data-mode", dark ? "dark" : "light");
+        }
+        applyMode();
+        window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", applyMode);
+        document.addEventListener("astro:after-swap", applyMode);
       })();
     </script>
     <ClientRouter />

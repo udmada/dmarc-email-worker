@@ -163,13 +163,51 @@ export interface TlsReportsPage {
   pageSize: number;
 }
 
+export interface GraphPoint {
+  day: string;
+  total: number;
+}
+
+export async function getDailyEmailVolume(db: D1Database, days = 30): Promise<GraphPoint[]> {
+  const since = Math.floor(Date.now() / 1000) - days * 86400;
+  const result = await db
+    .prepare(
+      `SELECT
+        date(r.begin_date, 'unixepoch') as day,
+        SUM(rec.count) as total
+       FROM dmarc_reports r
+       JOIN dmarc_records rec ON r.report_id = rec.report_id
+       WHERE r.begin_date >= ?
+       GROUP BY day
+       ORDER BY day ASC`,
+    )
+    .bind(since)
+    .all<GraphPoint>();
+  return result.results;
+}
+
 export async function getTlsReports(
   db: D1Database,
   page: number,
   domain?: string,
+  from?: number,
+  to?: number,
 ): Promise<TlsReportsPage> {
-  const where = domain != null ? "WHERE policy_domain = ?" : "";
-  const bindings: (string | number)[] = domain != null ? [domain] : [];
+  const conditions: string[] = [];
+  const bindings: (string | number)[] = [];
+  if (domain != null) {
+    conditions.push("policy_domain = ?");
+    bindings.push(domain);
+  }
+  if (from != null) {
+    conditions.push("begin_date >= ?");
+    bindings.push(from);
+  }
+  if (to != null) {
+    conditions.push("begin_date <= ?");
+    bindings.push(to);
+  }
+  const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
   const offset = (page - 1) * PAGE_SIZE;
 
   const [rows, count] = await Promise.all([

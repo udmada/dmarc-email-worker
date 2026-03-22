@@ -2,6 +2,7 @@
 import { Surface } from "@cloudflare/kumo";
 import { env } from "cloudflare:workers";
 import Layout from "../components/Layout.astro";
+import { FilterBar } from "../components/FilterBar.tsx";
 import { formatDate, getTlsReports, totalPages } from "../lib/db";
 
 const db = env.DB;
@@ -9,8 +10,14 @@ const url = Astro.url;
 
 const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10) || 1);
 const domain = url.searchParams.get("domain") ?? undefined;
+const fromParam = url.searchParams.get("from");
+const toParam = url.searchParams.get("to");
+const fromUnix = fromParam != null ? Math.floor(new Date(fromParam).getTime() / 1000) : NaN;
+const toUnix = toParam != null ? Math.floor(new Date(toParam).getTime() / 1000) : NaN;
+const from = isNaN(fromUnix) ? undefined : fromUnix;
+const to = isNaN(toUnix) ? undefined : toUnix;
 
-const { rows, total, pageSize } = await getTlsReports(db, page, domain);
+const { rows, total, pageSize } = await getTlsReports(db, page, domain, from, to);
 const pages = totalPages(total, pageSize);
 
 function pageUrl(p: number): string {
@@ -26,17 +33,7 @@ function pageUrl(p: number): string {
     <p class="text-sm text-kumo-subtle mt-1">{total} reports total</p>
   </div>
 
-  <form method="get" class="flex gap-3 mb-6 items-center">
-    <input
-      type="text"
-      name="domain"
-      value={domain ?? ""}
-      placeholder="Filter by policy domain…"
-      class="h-8 px-3 text-sm rounded-md border border-kumo-line bg-kumo-base text-kumo-default placeholder:text-kumo-placeholder focus:outline-2 focus:outline-kumo-brand w-56"
-    />
-    <button type="submit" class="h-8 px-3 text-sm rounded-md bg-kumo-brand text-white font-medium hover:opacity-90 transition-opacity cursor-pointer">Filter</button>
-    <a href="/tls-reports" class="text-sm text-kumo-subtle hover:text-kumo-default transition-colors">Clear</a>
-  </form>
+  <FilterBar domain={domain} from={fromParam ?? undefined} to={toParam ?? undefined} baseUrl="/tls-reports" client:load />
 
   <Surface className="overflow-hidden">
     <div class="overflow-x-auto">

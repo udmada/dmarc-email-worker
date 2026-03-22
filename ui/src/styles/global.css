@@ -1,6 +1,2 @@
 @import "tailwindcss";
 @import "@cloudflare/kumo/styles";
-
-:root {
-  color-scheme: light dark;
-}

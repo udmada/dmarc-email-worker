@@ -2,6 +2,7 @@
 import { Surface } from "@cloudflare/kumo";
 import { env } from "cloudflare:workers";
 import Layout from "../components/Layout.astro";
+import { FilterBar } from "../components/FilterBar.tsx";
 import { formatDate, getDmarcReports, totalPages } from "../lib/db";
 
 const db = env.DB;
@@ -39,29 +40,7 @@ function policyClass(p: string): string {
   </div>
 
   <!-- Filters -->
-  <form method="get" class="flex gap-3 mb-6 flex-wrap items-center">
-    <input
-      type="text"
-      name="domain"
-      value={domain ?? ""}
-      placeholder="Filter by domain…"
-      class="h-8 px-3 text-sm rounded-md border border-kumo-line bg-kumo-base text-kumo-default placeholder:text-kumo-placeholder focus:outline-2 focus:outline-kumo-brand w-48"
-    />
-    <input
-      type="date"
-      name="from"
-      value={fromParam ?? ""}
-      class="h-8 px-3 text-sm rounded-md border border-kumo-line bg-kumo-base text-kumo-default focus:outline-2 focus:outline-kumo-brand"
-    />
-    <input
-      type="date"
-      name="to"
-      value={toParam ?? ""}
-      class="h-8 px-3 text-sm rounded-md border border-kumo-line bg-kumo-base text-kumo-default focus:outline-2 focus:outline-kumo-brand"
-    />
-    <button type="submit" class="h-8 px-3 text-sm rounded-md bg-kumo-brand text-white font-medium hover:opacity-90 transition-opacity cursor-pointer">Filter</button>
-    <a href="/dmarc-reports" class="text-sm text-kumo-subtle hover:text-kumo-default transition-colors">Clear</a>
-  </form>
+  <FilterBar domain={domain} from={fromParam ?? undefined} to={toParam ?? undefined} baseUrl="/dmarc-reports" client:load />
 
   <!-- Table -->
   <Surface className="overflow-hidden">

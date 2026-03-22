@@ -13,7 +13,7 @@ const PRESETS = [
   { label: "7d", days: 7 },
   { label: "30d", days: 30 },
   { label: "90d", days: 90 },
-  { label: "All", days: null as null },
+  { label: "All", days: null },
 ];
 
 function toDateStr(d: Date): string {

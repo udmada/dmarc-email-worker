@@ -3,7 +3,8 @@ import { Surface } from "@cloudflare/kumo";
 import { env } from "cloudflare:workers";
 import Layout from "../components/Layout.astro";
 import { FilterBar } from "../components/FilterBar.tsx";
-import { formatDate, getDmarcReports, totalPages } from "../lib/db";
+import { DonutChart } from "../components/DonutChart.tsx";
+import { formatDate, getDmarcAlignmentStats, getDmarcReports, totalPages } from "../lib/db";
 
 const db = env.DB;
 const url = Astro.url;
@@ -17,8 +18,15 @@ const toUnix = toParam != null ? Math.floor(new Date(toParam).getTime() / 1000) 
 const from = isNaN(fromUnix) ? undefined : fromUnix;
 const to = isNaN(toUnix) ? undefined : toUnix;
 
-const { rows, total, pageSize } = await getDmarcReports(db, page, domain, from, to);
+const [{ rows, total, pageSize }, alignment] = await Promise.all([
+  getDmarcReports(db, page, domain, from, to),
+  getDmarcAlignmentStats(db, domain, from, to),
+]);
 const pages = totalPages(total, pageSize);
+
+const dkimPct = alignment.total > 0 ? Math.round((alignment.dkimAligned / alignment.total) * 100) : 0;
+const spfPct = alignment.total > 0 ? Math.round((alignment.spfAligned / alignment.total) * 100) : 0;
+const dmarcPct = alignment.total > 0 ? Math.round((alignment.dmarcAligned / alignment.total) * 100) : 0;
 
 function pageUrl(p: number): string {
   const params = new URLSearchParams(url.searchParams);
@@ -41,6 +49,15 @@ function policyClass(p: string): string {
 
   <!-- Filters -->
   <FilterBar domain={domain} from={fromParam ?? undefined} to={toParam ?? undefined} baseUrl="/dmarc-reports" client:load />
+
+  <!-- Alignment charts -->
+  <Surface className="p-6 mb-6">
+    <div class="flex flex-wrap gap-10 justify-around">
+      <DonutChart value={dkimPct} label="DKIM Aligned" sublabel={`${alignment.dkimAligned.toLocaleString()} / ${alignment.total.toLocaleString()} emails`} color="var(--color-kumo-success)" />
+      <DonutChart value={spfPct} label="SPF Aligned" sublabel={`${alignment.spfAligned.toLocaleString()} / ${alignment.total.toLocaleString()} emails`} color="var(--color-kumo-brand)" />
+      <DonutChart value={dmarcPct} label="DMARC Aligned" sublabel={`${alignment.dmarcAligned.toLocaleString()} / ${alignment.total.toLocaleString()} emails`} color="var(--color-kumo-link)" />
+    </div>
+  </Surface>
 
   <!-- Table -->
   <Surface className="overflow-hidden">

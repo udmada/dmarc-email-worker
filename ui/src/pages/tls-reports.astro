@@ -3,7 +3,8 @@ import { Surface } from "@cloudflare/kumo";
 import { env } from "cloudflare:workers";
 import Layout from "../components/Layout.astro";
 import { FilterBar } from "../components/FilterBar.tsx";
-import { formatDate, getTlsReports, totalPages } from "../lib/db";
+import { DonutChart } from "../components/DonutChart.tsx";
+import { formatDate, getTlsReports, getTlsStats, totalPages } from "../lib/db";
 
 const db = env.DB;
 const url = Astro.url;
@@ -17,8 +18,14 @@ const toUnix = toParam != null ? Math.floor(new Date(toParam).getTime() / 1000) 
 const from = isNaN(fromUnix) ? undefined : fromUnix;
 const to = isNaN(toUnix) ? undefined : toUnix;
 
-const { rows, total, pageSize } = await getTlsReports(db, page, domain, from, to);
+const [{ rows, total, pageSize }, tlsStats] = await Promise.all([
+  getTlsReports(db, page, domain, from, to),
+  getTlsStats(db, domain, from, to),
+]);
 const pages = totalPages(total, pageSize);
+
+const tlsTotal = tlsStats.totalSuccess + tlsStats.totalFailures;
+const tlsSuccessPct = tlsTotal > 0 ? Math.round((tlsStats.totalSuccess / tlsTotal) * 100) : 0;
 
 function pageUrl(p: number): string {
   const params = new URLSearchParams(url.searchParams);
@@ -34,6 +41,13 @@ function pageUrl(p: number): string {
   </div>
 
   <FilterBar domain={domain} from={fromParam ?? undefined} to={toParam ?? undefined} baseUrl="/tls-reports" client:load />
+
+  <!-- TLS success chart -->
+  <Surface className="p-6 mb-6">
+    <div class="flex flex-wrap gap-10 justify-around">
+      <DonutChart value={tlsSuccessPct} label="TLS Success Rate" sublabel={`${tlsStats.totalSuccess.toLocaleString()} success · ${tlsStats.totalFailures.toLocaleString()} failure`} color="var(--color-kumo-success)" />
+    </div>
+  </Surface>
 
   <Surface className="overflow-hidden">
     <div class="overflow-x-auto">

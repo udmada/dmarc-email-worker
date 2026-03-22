@@ -2,14 +2,12 @@
 import { Surface } from "@cloudflare/kumo";
 import { env } from "cloudflare:workers";
 import Layout from "../components/Layout.astro";
-import { VolumeGraph } from "../components/VolumeGraph.tsx";
-import { formatDate, getDailyEmailVolume, getDashboardStats, getRecentDmarcReports } from "../lib/db";
+import { formatDate, getDashboardStats, getRecentDmarcReports } from "../lib/db";
 
 const db = env.DB;
-const [stats, recent, graphData] = await Promise.all([
+const [stats, recent] = await Promise.all([
   getDashboardStats(db),
   getRecentDmarcReports(db, 10),
-  getDailyEmailVolume(db),
 ]);
 
 function policyClass(p: string): string {
@@ -48,17 +46,6 @@ function policyClass(p: string): string {
       <p class="text-xs text-kumo-inactive mt-1">all time</p>
     </Surface>
   </div>
-
-  <!-- Email volume graph -->
-  <Surface className="overflow-hidden mb-6">
-    <div class="px-6 py-4 border-b border-kumo-line">
-      <h2 class="font-semibold text-kumo-default">Email Volume</h2>
-      <p class="text-xs text-kumo-inactive mt-0.5">Past 30 days</p>
-    </div>
-    <div class="px-6 py-4">
-      <VolumeGraph data={graphData} client:visible />
-    </div>
-  </Surface>
 
   <!-- Recent activity -->
   <Surface className="overflow-hidden">

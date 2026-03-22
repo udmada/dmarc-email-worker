@@ -168,6 +168,100 @@ export interface GraphPoint {
   total: number;
 }
 
+export interface DmarcAlignmentStats {
+  total: number;
+  dkimAligned: number;
+  spfAligned: number;
+  dmarcAligned: number;
+}
+
+export async function getDmarcAlignmentStats(
+  db: D1Database,
+  domain?: string,
+  from?: number,
+  to?: number,
+): Promise<DmarcAlignmentStats> {
+  const conditions: string[] = [];
+  const bindings: (string | number)[] = [];
+  if (domain != null) {
+    conditions.push("r.domain = ?");
+    bindings.push(domain);
+  }
+  if (from != null) {
+    conditions.push("r.begin_date >= ?");
+    bindings.push(from);
+  }
+  if (to != null) {
+    conditions.push("r.begin_date <= ?");
+    bindings.push(to);
+  }
+  const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+  const row = await db
+    .prepare(
+      `SELECT
+        SUM(rec.count) as total,
+        SUM(CASE WHEN rec.dkim_result = 'pass' THEN rec.count ELSE 0 END) as dkim_aligned,
+        SUM(CASE WHEN rec.spf_result = 'pass' THEN rec.count ELSE 0 END) as spf_aligned,
+        SUM(CASE WHEN rec.dkim_result = 'pass' OR rec.spf_result = 'pass' THEN rec.count ELSE 0 END) as dmarc_aligned
+       FROM dmarc_records rec
+       JOIN dmarc_reports r ON rec.report_id = r.report_id
+       ${where}`,
+    )
+    .bind(...bindings)
+    .first<{
+      total: number | null;
+      dkim_aligned: number | null;
+      spf_aligned: number | null;
+      dmarc_aligned: number | null;
+    }>();
+  const total = row?.total ?? 0;
+  return {
+    total,
+    dkimAligned: row?.dkim_aligned ?? 0,
+    spfAligned: row?.spf_aligned ?? 0,
+    dmarcAligned: row?.dmarc_aligned ?? 0,
+  };
+}
+
+export interface TlsStats {
+  totalSuccess: number;
+  totalFailures: number;
+}
+
+export async function getTlsStats(
+  db: D1Database,
+  domain?: string,
+  from?: number,
+  to?: number,
+): Promise<TlsStats> {
+  const conditions: string[] = [];
+  const bindings: (string | number)[] = [];
+  if (domain != null) {
+    conditions.push("policy_domain = ?");
+    bindings.push(domain);
+  }
+  if (from != null) {
+    conditions.push("begin_date >= ?");
+    bindings.push(from);
+  }
+  if (to != null) {
+    conditions.push("begin_date <= ?");
+    bindings.push(to);
+  }
+  const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+  const row = await db
+    .prepare(
+      `SELECT SUM(total_success) as success, SUM(total_failures) as failures
+       FROM tls_reports ${where}`,
+    )
+    .bind(...bindings)
+    .first<{ success: number | null; failures: number | null }>();
+  return {
+    totalSuccess: row?.success ?? 0,
+    totalFailures: row?.failures ?? 0,
+  };
+}
+
 export async function getDailyEmailVolume(db: D1Database, days = 30): Promise<GraphPoint[]> {
   const since = Math.floor(Date.now() / 1000) - days * 86400;
   const result = await db

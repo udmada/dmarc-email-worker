@@ -55,7 +55,7 @@ function policyClass(p: string): string {
     <div class="flex flex-wrap gap-10 justify-around">
       <DonutChart value={dkimPct} label="DKIM Aligned" sublabel={`${alignment.dkimAligned.toLocaleString()} / ${alignment.total.toLocaleString()} emails`} color="var(--color-kumo-success)" />
       <DonutChart value={spfPct} label="SPF Aligned" sublabel={`${alignment.spfAligned.toLocaleString()} / ${alignment.total.toLocaleString()} emails`} color="var(--color-kumo-brand)" />
-      <DonutChart value={dmarcPct} label="DMARC Aligned" sublabel={`${alignment.dmarcAligned.toLocaleString()} / ${alignment.total.toLocaleString()} emails`} color="var(--color-kumo-link)" />
+      <DonutChart value={dmarcPct} label="DMARC Aligned" sublabel={`${alignment.dmarcAligned.toLocaleString()} / ${alignment.total.toLocaleString()} emails`} color="var(--text-color-kumo-link)" />
     </div>
   </Surface>
 

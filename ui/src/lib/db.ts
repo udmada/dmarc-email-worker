@@ -141,6 +141,20 @@ export async function getDmarcReports(
   return { rows: rows.results, total: count?.n ?? 0, page, pageSize: PAGE_SIZE };
 }
 
+export async function getDistinctDmarcDomains(db: D1Database): Promise<string[]> {
+  const result = await db
+    .prepare("SELECT DISTINCT domain FROM dmarc_reports ORDER BY domain ASC")
+    .all<{ domain: string }>();
+  return result.results.map((r) => r.domain);
+}
+
+export async function getDistinctTlsDomains(db: D1Database): Promise<string[]> {
+  const result = await db
+    .prepare("SELECT DISTINCT policy_domain FROM tls_reports ORDER BY policy_domain ASC")
+    .all<{ policy_domain: string }>();
+  return result.results.map((r) => r.policy_domain);
+}
+
 export async function getDmarcReport(db: D1Database, id: string): Promise<DmarcReportRow | null> {
   return db
     .prepare("SELECT * FROM dmarc_reports WHERE report_id = ?")

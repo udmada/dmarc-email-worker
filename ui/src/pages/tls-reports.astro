@@ -4,7 +4,7 @@ import { env } from "cloudflare:workers";
 import Layout from "../components/Layout.astro";
 import { FilterBar } from "../components/FilterBar.tsx";
 import { DonutChart } from "../components/DonutChart.tsx";
-import { formatDate, getTlsReports, getTlsStats, totalPages } from "../lib/db";
+import { formatDate, getDistinctTlsDomains, getTlsReports, getTlsStats, totalPages } from "../lib/db";
 
 const db = env.DB;
 const url = Astro.url;
@@ -18,9 +18,10 @@ const toUnix = toParam != null ? Math.floor(new Date(toParam).getTime() / 1000) 
 const from = isNaN(fromUnix) ? undefined : fromUnix;
 const to = isNaN(toUnix) ? undefined : toUnix;
 
-const [{ rows, total, pageSize }, tlsStats] = await Promise.all([
+const [{ rows, total, pageSize }, tlsStats, domains] = await Promise.all([
   getTlsReports(db, page, domain, from, to),
   getTlsStats(db, domain, from, to),
+  getDistinctTlsDomains(db),
 ]);
 const pages = totalPages(total, pageSize);
 
@@ -40,7 +41,7 @@ function pageUrl(p: number): string {
     <p class="text-sm text-kumo-subtle mt-1">{total} reports total</p>
   </div>
 
-  <FilterBar domain={domain} from={fromParam ?? undefined} to={toParam ?? undefined} baseUrl="/tls-reports" client:load />
+  <FilterBar domains={domains} domain={domain} from={fromParam ?? undefined} to={toParam ?? undefined} baseUrl="/tls-reports" client:load />
 
   <!-- TLS success chart -->
   <Surface className="p-6 mb-6">

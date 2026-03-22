@@ -4,7 +4,13 @@ import { env } from "cloudflare:workers";
 import Layout from "../components/Layout.astro";
 import { FilterBar } from "../components/FilterBar.tsx";
 import { DonutChart } from "../components/DonutChart.tsx";
-import { formatDate, getDmarcAlignmentStats, getDmarcReports, totalPages } from "../lib/db";
+import {
+  formatDate,
+  getDistinctDmarcDomains,
+  getDmarcAlignmentStats,
+  getDmarcReports,
+  totalPages,
+} from "../lib/db";
 
 const db = env.DB;
 const url = Astro.url;
@@ -18,9 +24,10 @@ const toUnix = toParam != null ? Math.floor(new Date(toParam).getTime() / 1000) 
 const from = isNaN(fromUnix) ? undefined : fromUnix;
 const to = isNaN(toUnix) ? undefined : toUnix;
 
-const [{ rows, total, pageSize }, alignment] = await Promise.all([
+const [{ rows, total, pageSize }, alignment, domains] = await Promise.all([
   getDmarcReports(db, page, domain, from, to),
   getDmarcAlignmentStats(db, domain, from, to),
+  getDistinctDmarcDomains(db),
 ]);
 const pages = totalPages(total, pageSize);
 
@@ -48,7 +55,7 @@ function policyClass(p: string): string {
   </div>
 
   <!-- Filters -->
-  <FilterBar domain={domain} from={fromParam ?? undefined} to={toParam ?? undefined} baseUrl="/dmarc-reports" client:load />
+  <FilterBar domains={domains} domain={domain} from={fromParam ?? undefined} to={toParam ?? undefined} baseUrl="/dmarc-reports" client:load />
 
   <!-- Alignment charts -->
   <Surface className="p-6 mb-6">

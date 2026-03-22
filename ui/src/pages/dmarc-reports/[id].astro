@@ -1,5 +1,5 @@
 ---
-import { Surface } from "@cloudflare/kumo";
+import { Badge, Surface } from "@cloudflare/kumo";
 import { env } from "cloudflare:workers";
 import Layout from "../../components/Layout.astro";
 import { getDmarcRecords, getDmarcReport } from "../../lib/db";
@@ -205,7 +205,10 @@ function faviconUrl(domain: string): string {
       <dt class="text-kumo-subtle">Period end</dt>
       <dd class="text-kumo-default">{new Date(report.end_date * 1000).toUTCString()}</dd>
       <dt class="text-kumo-subtle">Policy</dt>
-      <dd class="text-kumo-default capitalize">{report.policy_p}{report.policy_pct != null && report.policy_pct !== 100 ? ` (${report.policy_pct}%)` : ""}</dd>
+      <dd class="flex items-center gap-2">
+        <Badge variant={report.policy_p === "reject" ? "destructive" : report.policy_p === "quarantine" ? "outline" : "secondary"} className="capitalize">{report.policy_p}</Badge>
+        {report.policy_pct != null && report.policy_pct !== 100 && <span class="text-xs text-kumo-subtle">{report.policy_pct}%</span>}
+      </dd>
       <dt class="text-kumo-subtle">DKIM alignment</dt>
       <dd class="text-kumo-default uppercase">{report.adkim}</dd>
       <dt class="text-kumo-subtle">SPF alignment</dt>

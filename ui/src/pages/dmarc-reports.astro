@@ -1,5 +1,5 @@
 ---
-import { Surface } from "@cloudflare/kumo";
+import { Badge, Surface } from "@cloudflare/kumo";
 import { env } from "cloudflare:workers";
 import Layout from "../components/Layout.astro";
 import { FilterBar } from "../components/FilterBar.tsx";
@@ -41,10 +41,10 @@ function pageUrl(p: number): string {
   return `/dmarc-reports?${params}`;
 }
 
-function policyClass(p: string): string {
-  if (p === "reject") return "text-kumo-danger font-medium";
-  if (p === "quarantine") return "text-amber-600 font-medium";
-  return "text-kumo-subtle";
+function policyVariant(p: string): "destructive" | "outline" | "secondary" {
+  if (p === "reject") return "destructive";
+  if (p === "quarantine") return "outline";
+  return "secondary";
 }
 ---
 
@@ -95,7 +95,7 @@ function policyClass(p: string): string {
               <td class="px-4 py-3 text-sm text-kumo-subtle">{r.org_name}</td>
               <td class="px-4 py-3 text-sm text-kumo-subtle">{formatDate(r.begin_date)}</td>
               <td class="px-4 py-3 text-sm capitalize">
-                <span class={policyClass(r.policy_p)}>{r.policy_p}</span>
+                <Badge variant={policyVariant(r.policy_p)}>{r.policy_p}</Badge>
               </td>
               <td class="px-4 py-3">
                 <a

@@ -1,5 +1,5 @@
 compatibility_flags = ["nodejs_compat"]
-compatibility_date = "2026-02-04"
+compatibility_date = "2026-04-17"
 
 name = "dmarc-email-worker"
 main = "src/index.ts"
